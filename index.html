@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Francis Kienji | Portfolio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- External CSS -->
+<link rel="stylesheet" href="css_styling/style.css">
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Typed JS -->
+<script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.12"></script>
+
+</head>
+<body>
+
+<!-- NAVBAR -->
+<header>
+<nav class="navbar">
+
+<!-- Hamburger -->
+<div class="menu-toggle" id="menu-toggle">
+<i class="fas fa-bars"></i>
+</div>
+
+<!-- Logo -->
+<div class="logo">Portfolio.</div>
+
+<!-- Navigation Links -->
+<ul class="nav-links" id="nav-links">
+<li><a href="index.html">Home</a></li>
+<li><a href="About.html">About</a></li>
+<li><a href="Skills.html">Skills</a></li>
+<li><a href="Contact.html">Contact</a></li>
+</ul>
+
+</nav>
+</header>
+
+<!-- HOME SECTION -->
+<section class="home">
+
+<div class="home-left">
+
+<h1>Francis Kienji</h1>
+
+<h2>I'm a <span class="typing"></span></h2>
+
+<p>
+I am an ICT professional and Full-Stack Software Engineer with skills in
+software development, IT support, networking, cybersecurity, graphics design,
+and Microsoft Office tools. I build reliable, scalable, and user-centered
+digital solutions while supporting systems and networks to deliver secure,
+high-performance outcomes for real-world needs.
+</p>
+
+<div class="buttons">
+<a href="cv.html" target="_blank" class="cv-btn">View CV</a>
+<br> <br>
+
+<button class="download-btn" onclick="downloadCV()">Download CV</button>
+</div>
+
+<div class="social-icons">
+<i class="fab fa-facebook"></i>
+<i class="fab fa-linkedin"></i>
+<i class="fab fa-twitter"></i>
+<i class="fab fa-instagram"></i>
+</div>
+
+</div>
+
+<div class="home-right">
+<div class="image-circle">
+<img src="images/2025.png" alt="Profile Picture">
+</div>
+</div>
+
+</section>
+
+<!-- FOOTER -->
+
+<footer>
+
+<p>© 2026 Francis Kienji | Software Engineer & IT Expert</p>
+
+</footer>
+
+<script>
+function downloadCV(){
+window.open("CV.html?download=1", "_blank");
+}
+</script>
+
+
+<!-- Typing Animation -->
+<script>
+var typed = new Typed(".typing", {
+strings:[
+"Full-Stack Software Engineer",
+"IT Support Expert",
+"System Support Expert",
+"Networking Specialist",
+"Backend & API Developer",
+"Cybersecurity Enthusiast",
+"Database Management Specialist",
+"Web Developer",
+"Graphics Designer",
+"MS Office Specialist"
+],
+typeSpeed:80,
+backSpeed:30,
+loop:true
+});
+</script>
+
+<!-- Hamburger Menu Script -->
+<script>
+
+const menuToggle = document.getElementById("menu-toggle");
+const navLinks = document.getElementById("nav-links");
+
+menuToggle.addEventListener("click", () => {
+navLinks.classList.toggle("active");
+});
+
+</script>
+
+</body>
+</html>

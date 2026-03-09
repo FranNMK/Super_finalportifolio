@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Francis Kienji CV</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+
+body{
+background:#021827;
+font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+margin:0;
+padding:0;
+}
+
+/* DOWNLOAD BUTTON */
+
+.download-btn{
+display:block;
+margin:30px auto;
+padding:12px 25px;
+background:#00c853;
+color:white;
+border:none;
+font-size:16px;
+border-radius:6px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.download-btn:hover{
+background:#00a844;
+}
+
+.action-buttons{
+display:flex;
+justify-content:center;
+align-items:center;
+flex-wrap:wrap;
+gap:12px;
+margin:30px auto 10px;
+}
+
+.action-buttons .download-btn{
+display:inline-block;
+margin:0;
+}
+
+.print-btn{
+padding:12px 25px;
+background:#173a5e;
+color:white;
+border:none;
+font-size:16px;
+border-radius:6px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.print-btn:hover{
+background:#0f2b46;
+}
+
+/* CV CONTAINER */
+
+.cv-container{
+width:850px;
+margin:30px auto;
+display:flex;
+background:white;
+box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* LEFT SIDE */
+
+.left{
+width:35%;
+background:linear-gradient(180deg,#021827,#05233b);
+color:white;
+padding:30px;
+}
+
+.profile{
+text-align:center;
+margin-bottom:25px;
+}
+
+.profile img{
+width:130px;
+height:130px;
+border-radius:50%;
+border:5px solid white;
+object-fit:cover;
+}
+
+/* SECTION TITLES */
+
+.section-title{
+background:white;
+color:#021827;
+text-align:center;
+padding:7px;
+border-radius:20px;
+margin:25px 0 15px 0;
+font-weight:bold;
+font-size:13px;
+letter-spacing:1px;
+}
+
+/* CONTACT */
+
+.contact p{
+font-size:14px;
+margin:7px 0;
+}
+
+/* SKILLS */
+
+.skill{
+display:flex;
+align-items:center;
+justify-content:space-between;
+margin:8px 0;
+font-size:14px;
+}
+
+.dots{
+display:flex;
+gap:4px;
+}
+
+.dot{
+width:8px;
+height:8px;
+background:white;
+border-radius:50%;
+opacity:0.3;
+}
+
+.dot.active{
+opacity:1;
+}
+
+/* LANGUAGES */
+
+.language{
+margin:10px 0;
+font-size:14px;
+}
+
+.bar{
+width:100%;
+height:6px;
+background:#3a556d;
+border-radius:10px;
+margin-top:4px;
+}
+
+.level{
+height:6px;
+background:#00c853;
+border-radius:10px;
+}
+
+/* RIGHT SIDE */
+
+.right{
+width:65%;
+}
+
+.header{
+background:#173a5e;
+color:white;
+padding:35px;
+}
+
+.header h1{
+margin:0;
+font-size:34px;
+letter-spacing:1px;
+}
+
+.header h3{
+margin-top:6px;
+font-weight:normal;
+font-size:16px;
+}
+
+.content{
+padding:30px;
+}
+
+.content h3{
+background:#021827;
+color:white;
+display:inline-block;
+padding:6px 15px;
+border-radius:20px;
+font-size:13px;
+letter-spacing:1px;
+margin-top:20px;
+}
+
+.content p{
+font-size:14px;
+line-height:1.7;
+color:#333;
+}
+
+ul{
+font-size:14px;
+padding-left:20px;
+}
+
+li{
+margin:6px 0;
+}
+
+/* PRINT */
+
+@page{
+size:auto;
+margin:1mm;
+}
+
+@media print{
+
+.download-btn{
+display:none;
+}
+
+.print-btn{
+display:none;
+}
+
+.action-buttons{
+display:none;
+}
+
+body{
+background:white;
+margin:0;
+padding:0;
+}
+
+#cv{
+width:100%;
+margin:0;
+}
+
+.cv-container{
+box-shadow:none;
+margin:0;
+width:100%;
+}
+
+footer{
+display:none;
+}
+
+}
+
+footer{
+text-align:center;
+padding:20px;
+color:#aaa;
+background:#08121c;
+}
+
+.social-links{
+margin-bottom:12px;
+}
+
+.social-links a{
+color:#00ff66;
+font-size:22px;
+margin:0 10px;
+text-decoration:none;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="action-buttons">
+<button class="download-btn" onclick="downloadCV()">Download as PDF</button>
+<button class="print-btn" onclick="printCV()">Print</button>
+</div>
+
+<div id="cv">
+
+<div class="cv-container">
+
+<!-- LEFT SIDE -->
+
+<div class="left">
+
+<div class="profile">
+<img src="images/2025.png">
+</div>
+
+<div class="section-title">CONTACT</div>
+
+<div class="contact">
+<p>Nairobi, Kenya</p>
+<p>+254 710217048</p>
+<p>frankmk2025@gmail.com</p>
+<p>Portfolio: Available on request</p>
+</div>
+
+<div class="section-title">SKILLS</div>
+
+<div class="skill">
+<span>Full-Stack Development</span>
+<div class="dots">
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+</div>
+</div>
+
+<div class="skill">
+<span>Backend & API Development</span>
+<div class="dots">
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot"></div>
+</div>
+</div>
+
+<div class="skill">
+<span>IT Support & Systems</span>
+<div class="dots">
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot"></div>
+</div>
+</div>
+
+<div class="skill">
+<span>Networking & Security</span>
+<div class="dots">
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot"></div>
+</div>
+</div>
+
+<div class="skill">
+<span>Problem Solving</span>
+<div class="dots">
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot active"></div>
+<div class="dot"></div>
+</div>
+</div>
+
+<div class="section-title">LANGUAGES</div>
+
+<div class="language">
+English
+<div class="bar">
+<div class="level" style="width:95%"></div>
+</div>
+</div>
+
+<div class="language">
+Kiswahili
+<div class="bar">
+<div class="level" style="width:90%"></div>
+</div>
+</div>
+
+</div>
+
+<!-- RIGHT SIDE -->
+
+<div class="right">
+
+<div class="header">
+<h1>FRANCIS KIENJI</h1>
+<h3>FULL-STACK SOFTWARE ENGINEER | IT EXPERT | NETWORKING SPECIALIST</h3>
+</div>
+
+<div class="content">
+
+<h3>PROFESSIONAL SUMMARY</h3>
+
+<p>
+Results-driven Full-Stack Software Engineer with practical experience in web application development, IT support, and network administration. Skilled in building secure, scalable, and user-focused digital solutions while maintaining reliable systems and infrastructure. Strong in troubleshooting, backend integration, and delivering technology solutions that solve real business challenges.
+</p>
+
+<h3>EDUCATION</h3>
+
+<p><b>Diploma in ICT</b></p>
+<p>KIGUMO TECHNICAL VOCATIONAL COLLEGE </p>
+<ul>
+    <li><p>Year to Complete: 2027</p></li>
+</ul>
+<p>Power Learn Academy Software Development</p>
+<ul>
+    <li><p>Year of Completion: 2025 December</p></li>
+</ul>
+
+<h3>WORK EXPERIENCE</h3>
+
+<p><b>Software & IT Projects – Academic and Personal Portfolio</b></p>
+
+<ul>
+<li>Built and maintained responsive web applications using modern frontend and backend practices</li>
+<li>Configured and supported local networks, including troubleshooting connectivity and performance issues</li>
+<li>Provided IT support for software, systems setup, and technical issue resolution</li>
+<li>Implemented clean documentation and structured workflows to improve project delivery</li>
+</ul>
+
+<h3>CERTIFICATIONS</h3>
+
+<ul>
+<li>Diploma in ICT</li>
+<li>Power Learn Academy Software Development</li>
+<li>KCSE Certificate</li>
+</ul>
+
+<h3>REFEREES</h3>
+
+<p>Available upon request</p>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<footer>
+<div class="social-links">
+<a href="https://wa.me/254710217048" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a>
+<a href="#"><i class="fab fa-linkedin"></i></a>
+<a href="#"><i class="fab fa-twitter"></i></a>
+<a href="#"><i class="fab fa-github"></i></a>
+<a href="#"><i class="fab fa-instagram"></i></a>
+</div>
+<p>© 2026 Francis Kienji | Software Engineer & IT Expert</p>
+</footer>
+
+<script>
+
+async function downloadCV(){
+
+const element = document.querySelector(".cv-container");
+const jsPdfCtor = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+
+if(!element){
+alert("CV content not found.");
+return;
+}
+
+if(typeof html2canvas === "undefined" || !jsPdfCtor){
+alert("PDF library failed to load. Please refresh the page and try again.");
+return;
+}
+
+try{
+const previousMargin = element.style.margin;
+const previousBoxShadow = element.style.boxShadow;
+
+element.style.margin = "0";
+element.style.boxShadow = "none";
+let canvas;
+
+try{
+canvas = await html2canvas(element, {
+scale:2,
+useCORS:false,
+allowTaint:true,
+imageTimeout:0,
+backgroundColor:"#ffffff"
+});
+}finally{
+element.style.margin = previousMargin;
+element.style.boxShadow = previousBoxShadow;
+}
+
+const pdf = new jsPdfCtor({
+orientation:"p",
+unit:"mm",
+format:"a4"
+});
+
+const pageWidth = pdf.internal.pageSize.getWidth();
+const pageHeight = pdf.internal.pageSize.getHeight();
+const pageMargin = 2;
+const contentWidth = pageWidth - (pageMargin * 2);
+const contentHeight = pageHeight - (pageMargin * 2);
+
+const imageWidth = canvas.width;
+const imageHeight = canvas.height;
+
+const scaleRatio = Math.min(contentWidth / imageWidth, contentHeight / imageHeight);
+const renderWidth = imageWidth * scaleRatio;
+const renderHeight = imageHeight * scaleRatio;
+
+const x = (pageWidth - renderWidth) / 2;
+const y = (pageHeight - renderHeight) / 2;
+
+const imageData = canvas.toDataURL("image/jpeg", 0.95);
+pdf.addImage(imageData, "JPEG", x, y, renderWidth, renderHeight);
+pdf.save("Francis_Kienji_CV.pdf");
+}catch(error){
+console.error("PDF download failed:", error);
+alert("Download as PDF failed. Please refresh and try again.");
+}
+
+}
+
+function printCV(){
+window.print();
+}
+
+function arePdfLibrariesReady(){
+return typeof html2canvas !== "undefined" && !!(window.jspdf && window.jspdf.jsPDF);
+}
+
+function triggerAutoDownload(retries = 20){
+if(arePdfLibrariesReady()){
+downloadCV();
+return;
+}
+
+if(retries <= 0){
+alert("Automatic CV download could not start because PDF libraries are still loading. Refresh and try again.");
+return;
+}
+
+setTimeout(() => triggerAutoDownload(retries - 1), 250);
+}
+
+const query = new URLSearchParams(window.location.search);
+if(query.get("download") === "1"){
+triggerAutoDownload();
+}else if(query.get("print") === "1"){
+setTimeout(printCV, 350);
+}
+
+</script>
+
+</body>
+</html>

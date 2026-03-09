@@ -1,0 +1,371 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Segoe UI', sans-serif;
+}
+
+/* NAVBAR */
+
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px 80px;
+background:#0d1117;
+position:sticky;
+top:0;
+z-index:100;
+}
+
+.logo{
+color:#00ff66;
+font-size:24px;
+font-weight:bold;
+}
+
+.nav-links{
+list-style:none;
+display:flex;
+gap:30px;
+}
+
+.nav-links li a{
+color:#d1d5db;
+text-decoration:none;
+}
+
+.nav-links li a:hover,
+.nav-links li a.active{
+color:#00ff66;
+}
+
+/* .menu-toggle{
+display:none;
+background:none;
+border:none;
+color:#00ff66;
+font-size:24px;
+cursor:pointer;
+} */
+/* ===============================
+   GLOBAL RESET
+================================= */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background:#0b0f14;
+}
+
+/* ===============================
+   NAVBAR
+================================= */
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:20px 80px;
+    background:#0d1117;
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+
+.logo{
+    font-size:24px;
+    font-weight:bold;
+    color:#00ff66;
+}
+
+.nav-links{
+    display:flex;
+    list-style:none;
+    gap:30px;
+}
+
+.nav-links a{
+    text-decoration:none;
+    color:#d1d5db;
+    transition:0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active{
+    color:#00ff66;
+}
+
+/* Hamburger */
+/* .menu-toggle{
+    display:none;
+    font-size:24px;
+    color:#00ff66;
+    cursor:pointer;
+    background:none;
+    border:none;
+} */
+
+/* ===============================
+   SKILLS SECTION
+================================= */
+.skills-section{
+    min-height:100vh;
+    background:url("../images/your-background.jpg") center/cover no-repeat;
+    display:flex;
+    align-items:center;
+}
+
+/* Overlay */
+.overlay{
+    width:100%;
+    background:rgba(0,0,0,0.75);
+    padding:100px 80px;
+    text-align:center;
+}
+
+/* Heading */
+.overlay h1{
+    font-size:42px;
+    color:#00ff66;
+    margin-bottom:20px;
+}
+
+/* Intro text */
+.intro{
+    max-width:800px;
+    margin:auto;
+    color:#d1d5db;
+    line-height:1.7;
+    margin-bottom:60px;
+}
+
+/* ===============================
+   SKILL CARDS
+================================= */
+.skills-container{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px,1fr));
+    gap:30px;
+}
+
+/* Card */
+.skill-card{
+    background:rgba(13,17,23,0.9);
+    border:1px solid rgba(0,255,102,0.2);
+    padding:30px;
+    border-radius:12px;
+    transition:0.3s;
+}
+
+/* Hover effect */
+.skill-card:hover{
+    transform:translateY(-8px);
+    border-color:#00ff66;
+}
+
+/* Icon */
+.skill-card i{
+    font-size:30px;
+    color:#00ff66;
+    margin-bottom:15px;
+}
+
+/* Title */
+.skill-card h3{
+    color:white;
+    margin-bottom:10px;
+}
+
+/* Text */
+.skill-card p{
+    color:#cbd5e1;
+    font-size:15px;
+    line-height:1.6;
+}
+
+/* ===============================
+   MOBILE
+================================= */
+@media(max-width:768px){
+
+    .navbar{
+        padding:15px 30px;
+    }
+
+    /* .menu-toggle{
+        display:block;
+    } */
+
+    .nav-links{
+        position:absolute;
+        top:70px;
+        right:0;
+        background:#0d1117;
+        width:200px;
+        flex-direction:column;
+        text-align:center;
+        display:none;
+        padding:20px 0;
+    }
+
+    .nav-links li{
+        padding:10px 0;
+    }
+
+    .nav-links.active{
+        display:flex;
+    }
+
+    .overlay{
+        padding:80px 30px;
+    }
+
+}
+/* SKILLS SECTION */
+
+.skills-section{
+
+background:url("../images/image.png") no-repeat center/cover;
+min-height:100vh;
+
+}
+
+.overlay{
+
+background:rgba(0,0,0,0.85);
+padding:100px 80px;
+min-height:100vh;
+
+}
+
+.overlay h1{
+
+text-align:center;
+font-size:40px;
+color:#00ff66;
+margin-bottom:20px;
+
+}
+
+.intro{
+
+text-align:center;
+max-width:700px;
+margin:auto;
+color:#d1d5db;
+margin-bottom:40px;
+
+}
+
+.skills-container{
+
+max-width:700px;
+margin:auto;
+
+}
+
+.skill{
+
+margin-bottom:30px;
+
+}
+
+.skill i{
+
+color:#00ff66;
+margin-right:10px;
+
+}
+
+.progress{
+
+width:100%;
+height:10px;
+background:#1f2937;
+border-radius:10px;
+overflow:hidden;
+margin-top:5px;
+
+}
+
+.progress-bar{
+
+height:100%;
+background:#00ff66;
+width:0;
+animation:load 2s forwards;
+
+}
+
+/* SKILL LEVELS */
+
+.word{width:90%;}
+.excel{width:85%;}
+.finance{width:75%;}
+.communication{width:90%;}
+.service{width:85%;}
+.admin{width:80%;}
+
+@keyframes load{
+
+from{width:0;}
+to{}
+
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+/* .menu-toggle{
+display:block;
+} */
+
+.nav-links{
+position:absolute;
+top:65px;
+left:0;
+width:100%;
+background:#0d1117;
+flex-direction:column;
+align-items:center;
+display:none;
+padding:20px;
+}
+
+.nav-links.active{
+display:flex;
+}
+
+.overlay{
+padding:80px 30px;
+}
+
+}
+
+/* FOOTER */
+
+footer{
+background:#08121c;
+text-align:center;
+padding:20px;
+color:#aaa;
+}
+
+.social-links{
+margin-bottom:12px;
+}
+
+.social-links a{
+color:#00ff66;
+font-size:22px;
+margin:0 10px;
+text-decoration:none;
+}

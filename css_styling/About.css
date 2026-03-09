@@ -1,0 +1,471 @@
+/* ===============================
+   GLOBAL RESET
+================================= */
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body, html{
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    scroll-behavior:smooth;
+}
+
+/* ===============================
+   NAVBAR
+================================= */
+.navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px 80px;
+    background:#0d1117;
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+
+/* Logo */
+.logo{
+    font-size:24px;
+    font-weight:bold;
+    color:#00ff66;
+}
+
+/* Navigation Links */
+.nav-links{
+    list-style:none;
+    display:flex;
+    gap:30px;
+}
+
+.nav-links li a{
+    text-decoration:none;
+    color:#d1d5db;
+    transition:0.3s;
+    font-weight:500;
+}
+
+.nav-links li a:hover,
+.nav-links li a.active{
+    color:#00ff66;
+}
+
+/* Hamburger */
+/* .menu-toggle{
+    display:none;
+    background:none;
+    border:none;
+    font-size:24px;
+    color:#00ff66;
+    cursor:pointer;
+} */
+
+/* ===============================
+   ABOUT PAGE BACKGROUND
+================================= */
+.about-page{
+    background:url("../images/image.png") no-repeat center center/cover;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+}
+
+/* Dark overlay */
+.about-overlay{
+    background:rgba(13,17,23,0.85);
+    width:100%;
+    padding:100px 80px;
+}
+
+.about-content{
+    max-width:900px;
+    margin:auto;
+    text-align:center;
+}
+
+/* ===============================
+   PROFILE IMAGE
+================================= */
+.profile-img{
+    width:150px;
+    height:150px;
+    border-radius:50%;
+    object-fit:cover;
+    border:3px solid #00ff66;
+    margin-bottom:30px;
+}
+
+/* ===============================
+   TEXT STYLES
+================================= */
+.about-content h1{
+    font-size:40px;
+    color:#00ff66;
+    margin-bottom:20px;
+}
+
+.about-content p{
+    font-size:18px;
+    color:#d1d5db;
+    line-height:1.7;
+    margin-bottom:20px;
+}
+
+/* ===============================
+   DETAILS SECTION
+================================= */
+.about-details{
+    display:flex;
+    justify-content:space-between;
+    gap:40px;
+    margin-top:40px;
+    text-align:left;
+}
+
+.about-details h3{
+    color:#00ff66;
+    margin-bottom:10px;
+}
+
+.about-details ul{
+    list-style:none;
+}
+
+.about-details ul li{
+    margin-bottom:10px;
+    color:#d1d5db;
+}
+
+/* ===============================
+   SOCIAL LINKS
+================================= */
+.social-links{
+    margin-bottom:12px;
+    text-align:center;
+}
+
+.social-links a{
+    color:#00ff66;
+    margin:0 8px;
+    font-size:22px;
+    transition:0.3s;
+}
+
+.social-links a:hover{
+    color:#00ffcc;
+}
+
+/* ===============================
+   TABLET
+================================= */
+@media (max-width:1024px){
+
+    .about-content h1{
+        font-size:36px;
+    }
+
+    .about-content p{
+        font-size:16px;
+    }
+
+}
+
+/* ===============================
+   MOBILE
+================================= */
+@media (max-width:768px){
+
+    .navbar{
+        padding:15px 30px;
+    }
+
+    /* Show hamburger */
+    /* .menu-toggle{
+        display:block;
+    } */
+
+    /* Hide menu initially */
+    .nav-links{
+        position:absolute;
+        top:65px;
+        left:0;
+        width:100%;
+        background:#0d1117;
+        flex-direction:column;
+        align-items:center;
+        display:none;
+        padding:20px 0;
+        gap:15px;
+    }
+
+    .nav-links.active{
+        display:flex;
+    }
+
+    .about-overlay{
+        padding:80px 30px;
+    }
+
+    .about-details{
+        flex-direction:column;
+        text-align:center;
+        gap:25px;
+    }
+
+}
+
+/* ===============================
+   SMALL PHONES
+================================= */
+@media (max-width:480px){
+
+    .about-content h1{
+        font-size:28px;
+    }
+
+    .profile-img{
+        width:120px;
+        height:120px;
+    }
+
+}/* GLOBAL RESET */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Segoe UI',sans-serif;
+}
+
+/* NAVBAR */
+
+.navbar{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:15px 80px;
+background:#0d1117;
+position:sticky;
+top:0;
+z-index:100;
+}
+
+/* LOGO */
+
+.logo{
+font-size:24px;
+font-weight:bold;
+color:#00ff66;
+}
+
+/* NAV LINKS */
+
+.nav-links{
+list-style:none;
+display:flex;
+gap:30px;
+}
+
+.nav-links a{
+text-decoration:none;
+color:#d1d5db;
+font-weight:500;
+transition:0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active{
+color:#00ff66;
+}
+
+/* HAMBURGER */
+
+/* .menu-toggle{
+display:none;
+font-size:24px;
+background:none;
+border:none;
+color:#00ff66;
+cursor:pointer;
+} */
+
+/* ABOUT BACKGROUND */
+
+.about-page{
+background:url("../images/image.png") center/cover no-repeat;
+min-height:100vh;
+display:flex;
+align-items:center;
+}
+
+.about-overlay{
+background:rgba(13,17,23,0.85);
+width:100%;
+padding:100px 80px;
+}
+
+.about-content{
+max-width:900px;
+margin:auto;
+text-align:center;
+}
+
+/* PROFILE IMAGE */
+
+.profile-img{
+width:150px;
+height:150px;
+border-radius:50%;
+border:3px solid #00ff66;
+object-fit:cover;
+margin-bottom:30px;
+}
+
+/* TEXT */
+
+.about-content h1{
+font-size:40px;
+color:#00ff66;
+margin-bottom:20px;
+}
+
+.about-content p{
+color:#d1d5db;
+font-size:18px;
+line-height:1.7;
+margin-bottom:20px;
+}
+
+/* DETAILS */
+
+.about-details{
+display:flex;
+justify-content:space-between;
+margin-top:40px;
+gap:40px;
+text-align:left;
+}
+
+.about-details h3{
+color:#00ff66;
+margin-bottom:10px;
+}
+
+.about-details ul{
+list-style:none;
+}
+
+.about-details ul li{
+margin-bottom:10px;
+color:#d1d5db;
+}
+
+/* SOCIAL */
+
+.social-links a{
+color:#00ff66;
+font-size:22px;
+margin-right:15px;
+}
+
+.social-links a:hover{
+color:#00ffcc;
+}
+
+/* TABLET */
+
+@media(max-width:1024px){
+
+.about-content h1{
+font-size:36px;
+}
+
+.about-content p{
+font-size:16px;
+}
+
+}
+
+/* MOBILE */
+
+@media(max-width:768px){
+
+.navbar{
+padding:15px 20px;
+position:relative;
+}
+
+/* show hamburger */
+
+/* .menu-toggle{
+display:block;
+position:absolute;
+left:20px;
+} */
+
+/* logo center */
+
+.logo{
+margin:auto;
+}
+
+/* mobile menu */
+
+.nav-links{
+position:absolute;
+top:60px;
+left:0;
+width:100%;
+background:#0d1117;
+flex-direction:column;
+align-items:center;
+display:none;
+padding:20px 0;
+gap:15px;
+}
+
+.nav-links.active{
+display:flex;
+}
+
+/* content */
+
+.about-overlay{
+padding:80px 30px;
+}
+
+.about-details{
+flex-direction:column;
+text-align:center;
+}
+
+}
+
+/* SMALL PHONE */
+
+@media(max-width:480px){
+
+.about-content h1{
+font-size:28px;
+}
+
+.profile-img{
+width:120px;
+height:120px;
+}
+
+}
+
+/* FOOTER */
+
+footer{
+background:#08121c;
+text-align:center;
+padding:20px;
+color:#aaa;
+}
