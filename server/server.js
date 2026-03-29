@@ -148,26 +148,34 @@ app.get("/api/projects/years", (req, res) => {
 
 app.post("/api/admin/projects", (req, res) => {
     const { name, description, live_url, github_url, year } = req.body;
-
+    
+    // 1. Basic Validation (Senior Best Practice)
     if (!name || !year) {
         return res.status(400).json({ error: "Name and Year are required." });
     }
 
+    // 2. The SQL Command (Matched to your TiDB DESC output)
     const sql = "INSERT INTO projects (name, description, live_url, github_url, year) VALUES (?, ?, ?, ?, ?)";
-
+    
     db.query(sql, [name, description, live_url, github_url, year], async (err, result) => {
-        if (err) return res.status(500).json({ error: err.message });
+        if (err) {
+            // --- SENIOR DEBUG: THIS LOG IS THE KEY ---
+            console.error("[Senior Error] ❌ Database Insert Failed!");
+            console.error("SQL Error Message:", err.message);
+            return res.status(500).json({ error: "Database error: " + err.message });
+        }
 
         const projectId = result.insertId;
+        console.log(`[Senior Log] ✅ Project saved with ID: ${projectId}`);
 
+        // Trigger Screenshot Automation in the background
         if (live_url) {
             try {
+                console.log(`[Senior Log] 📸 Triggering screenshot for: ${live_url}`);
                 const screenshotResult = await captureProjectScreenshot(live_url, projectId);
                 if (screenshotResult && screenshotResult.path) {
-                    db.query(
-                        "UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?",
-                        [screenshotResult.path, screenshotResult.time, projectId]
-                    );
+                    db.query("UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?", 
+                        [screenshotResult.path, screenshotResult.time, projectId]);
                 }
             } catch (screenshotError) {
                 console.error("[Senior Error] Screenshot failed:", screenshotError.message);
@@ -177,6 +185,7 @@ app.post("/api/admin/projects", (req, res) => {
         res.status(201).json({ message: "Project added successfully!", id: projectId });
     });
 });
+
 
 app.put("/api/admin/projects/:id", (req, res) => {
     const projectId = Number(req.params.id);

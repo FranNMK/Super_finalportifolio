@@ -1,7 +1,6 @@
 // At the top of your JS files
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://your-backend-name.onrender.com/api';
+
+const API_BASE_URL = 'http://localhost:5000/api'; 
 
 
 document.addEventListener('DOMContentLoaded', () => {
