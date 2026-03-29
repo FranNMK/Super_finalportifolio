@@ -84,7 +84,16 @@ async function captureProjectScreenshot(url, projectId) {
     let browser;
     let tempPath;
     try {
-        browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const browser = await puppeteer.launch({
+            headless: "new",
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', // Senior Tip: Prevents memory crashes on small servers
+                '--single-process'         // Senior Tip: Saves RAM on Render's free tier
+            ]
+        });
+
         const page = await browser.newPage();
         await page.setViewport({ width: 1280, height: 720 });
 
@@ -187,7 +196,7 @@ app.get("/api/projects/years", (req, res) => {
 
 app.post("/api/admin/projects", (req, res) => {
     const { name, description, live_url, github_url, year } = req.body;
-    
+
     // 1. Basic Validation (Senior Best Practice)
     if (!name || !year) {
         return res.status(400).json({ error: "Name and Year are required." });
@@ -195,7 +204,7 @@ app.post("/api/admin/projects", (req, res) => {
 
     // 2. The SQL Command (Matched to your TiDB DESC output)
     const sql = "INSERT INTO projects (name, description, live_url, github_url, year) VALUES (?, ?, ?, ?, ?)";
-    
+
     db.query(sql, [name, description, live_url, github_url, year], async (err, result) => {
         if (err) {
             // --- SENIOR DEBUG: THIS LOG IS THE KEY ---
@@ -213,7 +222,7 @@ app.post("/api/admin/projects", (req, res) => {
                 console.log(`[Senior Log] 📸 Triggering screenshot for: ${live_url}`);
                 const screenshotResult = await captureProjectScreenshot(live_url, projectId);
                 if (screenshotResult && screenshotResult.path) {
-                    db.query("UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?", 
+                    db.query("UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?",
                         [screenshotResult.path, screenshotResult.time, projectId]);
                 }
             } catch (screenshotError) {

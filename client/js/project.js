@@ -1,7 +1,8 @@
 
 const API_BASE_URL = window.location.hostname === 'localhost' 
     ? 'http://localhost:5000/api' 
-    : 'https://your-backend-name.onrender.com/api';
+    : 'https://super-finalportifolio.onrender.com/api';
+
 
 
 async function fetchProjects(year = 'all') {
