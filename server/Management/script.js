@@ -1,6 +1,7 @@
-// At the top of your JS files
 
-const API_BASE_URL = 'http://localhost:5000/api'; 
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://super-finalportifolio.onrender.com/api';
 
 
 document.addEventListener('DOMContentLoaded', () => {
