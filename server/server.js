@@ -1,6 +1,21 @@
-// server.js - Professional Path Resolution
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const cloudinary = require('cloudinary').v2;
+
+const hasCloudinaryConfig =
+    !!process.env.CLOUDINARY_CLOUD_NAME &&
+    !!process.env.CLOUDINARY_API_KEY &&
+    !!process.env.CLOUDINARY_API_SECRET;
+
+if (hasCloudinaryConfig) {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+} else {
+    console.warn("[Senior Warning] Cloudinary env vars are missing. Screenshot uploads will use local storage.");
+}
 
 const express = require("express");
 const mysql = require("mysql2");
@@ -67,6 +82,7 @@ async function captureProjectScreenshot(url, projectId) {
     console.log(`[Senior Log] 🚀 Initiating Render-Aware Capture for: ${url}`);
 
     let browser;
+    let tempPath;
     try {
         browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox', '--disable-setuid-sandbox'] });
         const page = await browser.newPage();
@@ -97,19 +113,42 @@ async function captureProjectScreenshot(url, projectId) {
 
         await new Promise(resolve => setTimeout(resolve, 10000));
 
-        const dir = path.join(__dirname, 'images', 'projects');
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-        const fileName = `project_${projectId}_${Date.now()}.png`;
-        const filePath = path.join(dir, fileName);
-        await page.screenshot({ path: filePath });
+        tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
+        await page.screenshot({ path: tempPath });
 
         const totalTime = Math.floor((Date.now() - startTime) / 1000);
         console.log(`[Success] 📸 Captured in ${totalTime} seconds!`);
 
+        if (hasCloudinaryConfig) {
+            console.log(`[Senior Log] ☁️ Uploading to Cloudinary...`);
+            const uploadResult = await cloudinary.uploader.upload(tempPath, {
+                folder: 'portfolio_projects',
+                public_id: `project_${projectId}`,
+                overwrite: true,
+                invalidate: true
+            });
+
+            fs.unlinkSync(tempPath);
+            tempPath = null;
+
+            console.log(`[Success] 🚀 Permanent Cloud URL: ${uploadResult.secure_url}`);
+            return { path: uploadResult.secure_url, time: totalTime };
+        }
+
+        const dir = path.join(__dirname, 'images', 'projects');
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+        const fileName = `project_${projectId}_${Date.now()}.png`;
+        const finalPath = path.join(dir, fileName);
+        fs.renameSync(tempPath, finalPath);
+        tempPath = null;
+
         return { path: `images/projects/${fileName}`, time: totalTime };
     } catch (error) {
         console.error(`[Senior Error] ❌ Automation failed: ${error.message}`);
+        if (tempPath && fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+        }
         return null;
     } finally {
         if (browser) await browser.close();
@@ -271,11 +310,14 @@ app.delete("/api/admin/projects/:id/permanent", (req, res) => {
             if (deleteErr) return res.status(500).json({ error: "Delete failed" });
 
             if (imagePath) {
-                const fullPath = path.join(__dirname, imagePath);
-                fs.unlink(fullPath, (fsErr) => {
-                    if (fsErr) console.error(`[Senior Warning] Could not delete file: ${fullPath}`);
-                    else console.log(`[Senior Log] 🗑️ Deleted unused image: ${imagePath}`);
-                });
+                const isRemoteImage = /^https?:\/\//i.test(imagePath);
+                if (!isRemoteImage) {
+                    const fullPath = path.join(__dirname, imagePath);
+                    fs.unlink(fullPath, (fsErr) => {
+                        if (fsErr) console.error(`[Senior Warning] Could not delete file: ${fullPath}`);
+                        else console.log(`[Senior Log] 🗑️ Deleted unused image: ${imagePath}`);
+                    });
+                }
             }
 
             res.json({ message: "Project permanently deleted from system." });
