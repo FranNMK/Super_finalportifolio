@@ -1,0 +1,4 @@
+.env
+node_modules/
+server/images/projects/*.png
+server/test-screenshot.js

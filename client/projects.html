@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Projects | Francis Kienji</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="../css_styling/style.css">
+    <link rel="stylesheet" href="../css_styling/project.css">
+    <link rel="stylesheet" href="" ./css_styling/About.css">
+    <!-- Specific projects page  styling -->
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        footer {
+            background: #08121c;
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+        }
+
+        .social-links {
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .social-links a {
+            color: #00ff66;
+            margin: 0 8px;
+            font-size: 22px;
+            transition: 0.3s;
+        }
+
+        .social-links a:hover {
+            color: #00ffcc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header>
+        <nav class="navbar">
+
+            <!-- Hamburger -->
+            <div class="menu-toggle" id="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+
+            <!-- Logo -->
+            <div class="logo">Portfolio.</div>
+
+            <!-- Navigation Links -->
+            <ul class="nav-links" id="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="About.html">About</a></li>
+                <li><a href="Skills.html">Skills</a></li>
+                <li><a href="projects.html">My Projects</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+
+        </nav>
+    </header>
+
+
+
+    <!-- PROJECTS SECTION -->
+    <section class="projects-page">
+        <div class="overlay">
+            <h1>My Projects</h1>
+
+            <div class="year-tabs">
+                <button class="tab-button active" data-year="all">All Projects</button>
+                <!-- Years will be dynamically added here by JavaScript -->
+            </div>
+
+            <div id="projects-container" class="projects-grid">
+                <!-- Projects will be loaded here by JavaScript -->
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER  -->
+    <footer>
+
+        <div class="social-links">
+            <a href="https://wa.me/254710217048" target="_blank" rel="noopener noreferrer"><i
+                    class="fab fa-whatsapp"></i></a>
+            <a href="#"><i class="fab fa-linkedin"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-github"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+        </div>
+
+        <p>© 2026 Francis Kienji | Software Engineer & IT Expert</p>
+
+    </footer>
+
+    <!-- Hamburger Menu Script -->
+    <script>
+
+        const menuToggle = document.getElementById("menu-toggle");
+        const navLinks = document.getElementById("nav-links");
+
+        menuToggle.addEventListener("click", () => {
+            navLinks.classList.toggle("active");
+        });
+
+    </script>
+
+
+    <!-- Projects Loading Script -->
+    <script src="js/project.js"></script> <!-- New script for projects -->
+</body>
+
+</html>
