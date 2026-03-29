@@ -1,10 +1,28 @@
+// server.js - Professional Path Resolution
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
-const path = require("path");
 const fs = require("fs");
 const puppeteer = require("puppeteer");
-require("dotenv").config();
+
+const resolvedDbHost = process.env.TIDB_HOST || process.env.DB_HOST;
+const resolvedDbUser = process.env.TIDB_USER || process.env.DB_USER || process.env.DB_USERNAME;
+const resolvedDbPassword = process.env.TIDB_PASSWORD || process.env.DB_PASSWORD;
+const resolvedDbName = process.env.TIDB_DB_NAME || process.env.DB_NAME || process.env.DB_DATABASE;
+const resolvedDbPort = Number(process.env.TIDB_PORT || process.env.DB_PORT || 4000);
+const useSsl = process.env.DB_SSL === "true" || !!process.env.TIDB_HOST;
+
+console.log("[Senior Debug] Checking Environment Variables...");
+console.log("DB host exists:", !!resolvedDbHost);
+console.log("DB user exists:", !!resolvedDbUser);
+
+if (!resolvedDbHost || !resolvedDbUser || !resolvedDbName) {
+    console.error("[Senior Error] Missing required DB env values. Please check host, user, and database in .env.");
+}
+
 
 const app = express();
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -16,21 +34,30 @@ const SERVER_IMAGES_DIR = path.join(__dirname, "images");
 app.use(cors());
 app.use(express.json());
 
-// server.js - Professional Cloud Connection
+// server.js - Professional Connection Logic
 const db = mysql.createPool({
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "portfolio_db",
-    port: process.env.DB_PORT || 3306,
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME || "test", // TiDB default is often 'test'
+    port: process.env.DB_PORT || 4000,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    // --- SENIOR SSL CONFIGURATION ---
-    // This allows it to work on Local (no SSL) and Cloud (SSL required)
-    ssl: process.env.DB_SSL === "true" ? {
+    ssl: {
+        minVersion: 'TLSv1.2',
         rejectUnauthorized: true
-    } : null
+    }
+});
+
+// Test the connection immediately
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error("[Senior Error] ❌ Connection Failed:", err.message);
+    } else {
+        console.log(`[Senior Log] ✅ Connected to TiDB Cloud (ID: ${connection.threadId})`);
+        connection.release();
+    }
 });
 
 
