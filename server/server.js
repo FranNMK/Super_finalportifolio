@@ -94,10 +94,14 @@ async function captureProjectScreenshot(url, projectId) {
 
   try {
     // Launch Puppeteer
+    // browser = await puppeteer.launch({
+    //   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+    //   headless: true,
+    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    // });
     browser = await puppeteer.launch({
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
@@ -120,7 +124,9 @@ async function captureProjectScreenshot(url, projectId) {
     });
 
     if (!hasContent) {
-      console.log("[Screenshot] ⚠️ Page content too small, skipping screenshot.");
+      console.log(
+        "[Screenshot] ⚠️ Page content too small, skipping screenshot.",
+      );
       return null;
     }
 
