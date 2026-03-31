@@ -4,7 +4,7 @@
 
 ## 📝 Description
 
-Super_finalportifolio is a sophisticated and robust backend project built with Node.js, designed to showcase high-level engineering skills and professional web development standards. This portfolio piece features seamless database integration for efficient data management and persistence, paired with a comprehensive testing suite to ensure maximum reliability and code quality. It stands as a definitive demonstration of scalable server-side architecture and rigorous software development practices.
+This is a sophisticated and robust backend project built with Node.js, designed to showcase high-level engineering skills and professional web development standards. This portfolio piece features seamless database integration for efficient data management and persistence, paired with a comprehensive testing suite to ensure maximum reliability and code quality. It stands as a definitive demonstration of scalable server-side architecture and rigorous software development practices.
 
 ## ✨ Features
 
