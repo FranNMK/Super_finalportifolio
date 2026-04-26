@@ -149,14 +149,32 @@ forgotPasswordLink.addEventListener("click", (e) => {
 // CHECK IF ALREADY LOGGED IN
 // ============================================
 
-function checkIfLoggedIn() {
+async function checkIfLoggedIn() {
     const token = localStorage.getItem("authToken");
     
     if (token) {
-        // User is already logged in, redirect to admin panel
-        window.location.href = "/admin";
+        try {
+            // Verify if the token is actually valid with the backend
+            const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token })
+            });
+            
+            if (response.ok) {
+                // ONLY redirect if the token is valid AND we aren't already on the manage page
+                // We use the full Render URL here to avoid the Vercel redirect loop
+                window.location.href = "https://super-finalportifolio.onrender.com/Management/manage.html";
+            } else {
+                // Token is invalid, clear it
+                localStorage.removeItem("authToken" );
+            }
+        } catch (error) {
+            console.error("Auth check failed:", error);
+        }
     }
 }
+
 
 // Run check on page load
 checkIfLoggedIn();
