@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Admin Access | Francis Kienji</title>
+    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- Header -->
+            <div class="profile-section">
+                <h1 class="login-title">Request Access</h1>
+                <p class="login-subtitle">Ask for admin panel access</p>
+            </div>
+
+            <!-- Access Request Form -->
+            <form id="accessRequestForm" class="login-form">
+                <div class="form-group">
+                    <label for="name">
+                        <i class="fas fa-user"></i> Full Name
+                    </label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        placeholder="Enter your full name" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i> Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="Enter your email" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="reason">
+                        <i class="fas fa-comment"></i> Reason for Access
+                    </label>
+                    <textarea 
+                        id="reason" 
+                        name="reason" 
+                        placeholder="Explain why you need admin access..." 
+                        rows="4"
+                        required
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="btn-login">
+                    <i class="fas fa-paper-plane"></i> Submit Request
+                </button>
+            </form>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+            <!-- Success Message -->
+            <div id="successMessage" class="success-message" style="display: none;"></div>
+
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Submitting request...</p>
+            </div>
+
+            <!-- Footer Links -->
+            <div class="login-footer">
+                <a href="login.html" class="footer-link">
+                    <i class="fas fa-sign-in-alt"></i> Back to Login
+                </a>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider-line"></div>
+
+            <!-- Back to Portfolio -->
+            <div class="back-to-portfolio">
+                <a href="/" class="btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Portfolio
+                </a>
+            </div>
+        </div>
+
+        <!-- Background Animation -->
+        <div class="background-animation">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+        </div>
+    </div>
+
+    <script src="access-request.js"></script>
+</body>
+
+</html>

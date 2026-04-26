@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/admin",
-      "destination": "https://super-finalportifolio.onrender.com/Management/manage.html"
+      "destination": "https://super-finalportifolio.onrender.com/Management/login.html"
     }
   ]
 }
