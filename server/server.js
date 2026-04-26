@@ -23,14 +23,7 @@ const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const fs = require("fs");
-let puppeteer = null;
-try {
-  puppeteer = require("puppeteer");
-} catch (error) {
-  console.warn(
-    "[Senior Warning] Puppeteer is unavailable. Automatic screenshots are disabled until puppeteer is installed.",
-  );
-}
+const puppeteer = require('puppeteer');
 
 const resolvedDbHost = process.env.TIDB_HOST || process.env.DB_HOST;
 const resolvedDbUser =
@@ -93,13 +86,6 @@ db.getConnection((err, connection) => {
 
 // Professional Screenshot Engine
 async function captureProjectScreenshot(url, projectId) {
-  if (!puppeteer) {
-    console.warn(
-      "[Screenshot] Puppeteer not available, skipping automatic screenshot generation.",
-    );
-    return null;
-  }
-
   const startTime = Date.now();
   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
 
