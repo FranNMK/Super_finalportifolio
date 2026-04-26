@@ -412,3 +412,10 @@ async function permanentDelete(id) {
     await fetch(`${API_BASE_URL}/admin/projects/${id}/permanent`, { method: 'DELETE' });
     loadRecycleBin();
 }
+
+// Logout functionality
+document.getElementById("logoutBtn")?.addEventListener("click", () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    window.location.href = "login.html";
+});

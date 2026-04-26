@@ -9,8 +9,18 @@
     <link rel="stylesheet" href="https://super-finalportifolio.onrender.com/Management/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+<script>
+    // Check if user is logged in
+    const token = localStorage.getItem("authToken");
+
+    if (!token) {
+        // Not logged in, redirect to login page
+        window.location.href = "login.html";
+    }
+</script>
 
 <body>
+
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
@@ -38,6 +48,14 @@
                     <a href="../index.html" target="_blank" class="btn-external">
                         <i class="fas fa-external-link-alt"></i> View Portfolio
                     </a>
+                </div>
+                <div class="header-right">
+                    <a href="../index.html" target="_blank" class="btn-external">
+                        <i class="fas fa-external-link-alt"></i> View Portfolio
+                    </a>
+                    <button id="logoutBtn" class="btn-logout" style="margin-left: 10px;">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
                 </div>
             </header>
 

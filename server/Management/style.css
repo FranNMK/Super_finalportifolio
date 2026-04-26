@@ -688,3 +688,17 @@ body {
     background-color: #fffafa;
 }
 
+.btn-logout {
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+    background-color: #e63946;
+}
