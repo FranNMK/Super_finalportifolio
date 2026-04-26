@@ -172,6 +172,8 @@ db.getConnection((err, connection) => {
 //     if (browser) await browser.close();
 //   }
 // }
+
+
 async function captureProjectScreenshot(url, projectId) {
   const startTime = Date.now();
   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
@@ -194,48 +196,70 @@ async function captureProjectScreenshot(url, projectId) {
 
     console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted" : "External"}`);
 
-    // Navigate to URL
+    // Navigate to URL - use 'networkidle2' for better JS rendering detection
     const navigationTimeout = isRenderHosted ? 90000 : 60000;
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: navigationTimeout });
+      await page.goto(url, { 
+        waitUntil: "networkidle2", // Wait for network to be mostly idle
+        timeout: navigationTimeout 
+      });
     } catch (navError) {
       console.error(`[Screenshot] ❌ Navigation failed: ${navError.message}`);
       return null;
     }
 
-    // SMART WAIT: Wait for actual content to render
-    console.log("[Screenshot] ⏳ Waiting for content to render...");
+    // CRITICAL: Wait for JavaScript to finish rendering
+    console.log("[Screenshot] ⏳ Waiting for JavaScript rendering...");
     
-    const maxWaitTime = isRenderHosted ? 45000 : 30000; // Max 45s for Render, 30s for others
+    const maxWaitTime = isRenderHosted ? 45000 : 30000;
     const startWait = Date.now();
     let contentReady = false;
+    let previousHtmlSize = 0;
+    let stableCount = 0;
 
     while (Date.now() - startWait < maxWaitTime && !contentReady) {
       try {
+        // Wait for network idle to ensure JS has finished
+        try {
+          await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 5000 }).catch(() => {});
+        } catch {
+          // Timeout is expected here
+        }
+
         // Check if page has meaningful content
         const pageContent = await page.evaluate(() => {
+          // Wait for body to have content
           const body = document.body;
           const html = body.innerHTML;
-          const text = body.innerText;
+          const text = body.innerText.trim();
           
           // Count visible elements
-          const elements = body.querySelectorAll("*");
-          const visibleElements = Array.from(elements).filter(el => {
+          const allElements = body.querySelectorAll("*");
+          const visibleElements = Array.from(allElements).filter(el => {
             const style = window.getComputedStyle(el);
-            return style.display !== "none" && style.visibility !== "hidden";
+            const rect = el.getBoundingClientRect();
+            return (
+              style.display !== "none" && 
+              style.visibility !== "hidden" &&
+              rect.width > 0 &&
+              rect.height > 0
+            );
           }).length;
 
           return {
             htmlSize: html.length,
             textLength: text.length,
-            elementCount: elements.length,
+            elementCount: allElements.length,
             visibleElements: visibleElements,
             hasMainContent: !!(
               document.querySelector("main") ||
               document.querySelector("[role='main']") ||
               document.querySelector(".container") ||
-              document.querySelector(".content")
+              document.querySelector(".content") ||
+              document.querySelector("header") ||
+              document.querySelector("nav")
             ),
+            bodyClasses: body.className,
           };
         });
 
@@ -247,31 +271,43 @@ async function captureProjectScreenshot(url, projectId) {
           hasMain: pageContent.hasMainContent,
         });
 
+        // Check if HTML size is stabilizing (content has finished rendering)
+        if (Math.abs(pageContent.htmlSize - previousHtmlSize) < 100) {
+          stableCount++;
+        } else {
+          stableCount = 0;
+        }
+        previousHtmlSize = pageContent.htmlSize;
+
         // Content is ready if:
-        // - HTML is substantial (>1000 bytes) AND
-        // - Either has main content area OR has visible elements (>10)
+        // - HTML is substantial (>2000 bytes) AND
+        // - Has visible elements (>5) AND
+        // - Either has main content area OR has header/nav AND
+        // - HTML size has been stable for 2 checks
         if (
-          pageContent.htmlSize > 1000 &&
-          (pageContent.hasMainContent || pageContent.visibleElements > 10)
+          pageContent.htmlSize > 2000 &&
+          pageContent.visibleElements > 5 &&
+          (pageContent.hasMainContent || pageContent.elementCount > 20) &&
+          stableCount >= 2
         ) {
           contentReady = true;
-          console.log("[Screenshot] ✅ Content ready!");
+          console.log("[Screenshot] ✅ Content ready and stable!");
           break;
         }
 
-        // If page is completely empty, fail fast
-        if (pageContent.htmlSize < 100 && pageContent.elementCount < 5) {
-          console.log("[Screenshot] ❌ Page appears to be empty or broken.");
+        // If page is completely empty after 10 seconds, fail fast
+        const elapsedSeconds = Math.floor((Date.now() - startWait) / 1000);
+        if (elapsedSeconds > 10 && pageContent.htmlSize < 500) {
+          console.log("[Screenshot] ❌ Page appears to be empty or broken after 10s.");
           return null;
         }
 
-        // Wait a bit before checking again
+        // Wait before checking again
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Try to trigger more content loading
+        // Scroll to trigger lazy loading and JS rendering
         await page.evaluate(() => {
-          // Scroll to trigger lazy loading
-          window.scrollBy(0, window.innerHeight);
+          window.scrollBy(0, window.innerHeight / 2);
         });
 
       } catch (checkError) {
