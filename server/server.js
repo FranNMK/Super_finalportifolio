@@ -182,7 +182,6 @@ async function captureProjectScreenshot(url, projectId) {
   try {
     // Detect if this is a Render-hosted site
     const isRenderHosted = url.includes(".onrender.com");
-    const extraWaitTime = isRenderHosted ? 15000 : 5000; // Extra 15s for Render cold start
 
     // Launch Puppeteer
     browser = await puppeteer.launch({
@@ -193,63 +192,102 @@ async function captureProjectScreenshot(url, projectId) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 720 });
 
-    console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted (will wait longer)" : "External"}`);
+    console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted" : "External"}`);
 
-    // Navigate to URL with longer timeout for Render sites
+    // Navigate to URL
     const navigationTimeout = isRenderHosted ? 90000 : 60000;
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: navigationTimeout });
-
-    // Wait for network to be idle
     try {
-      await page.waitForNetworkIdle({ idleTime: 3000, timeout: navigationTimeout });
-    } catch {
-      console.log("[Screenshot] ⚠️ Network idle timeout, continuing anyway.");
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: navigationTimeout });
+    } catch (navError) {
+      console.error(`[Screenshot] ❌ Navigation failed: ${navError.message}`);
+      return null;
     }
 
-    // Extra wait for Render sites to fully render
-    if (isRenderHosted) {
-      console.log("[Screenshot] ⏳ Waiting extra time for Render service to fully load...");
-      await new Promise(resolve => setTimeout(resolve, extraWaitTime));
-    }
+    // SMART WAIT: Wait for actual content to render
+    console.log("[Screenshot] ⏳ Waiting for content to render...");
+    
+    const maxWaitTime = isRenderHosted ? 45000 : 30000; // Max 45s for Render, 30s for others
+    const startWait = Date.now();
+    let contentReady = false;
 
-    // Check for content with retry logic
-    let hasContent = false;
-    let retryCount = 0;
-    const maxRetries = isRenderHosted ? 3 : 1;
+    while (Date.now() - startWait < maxWaitTime && !contentReady) {
+      try {
+        // Check if page has meaningful content
+        const pageContent = await page.evaluate(() => {
+          const body = document.body;
+          const html = body.innerHTML;
+          const text = body.innerText;
+          
+          // Count visible elements
+          const elements = body.querySelectorAll("*");
+          const visibleElements = Array.from(elements).filter(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== "none" && style.visibility !== "hidden";
+          }).length;
 
-    while (!hasContent && retryCount < maxRetries) {
-      const contentInfo = await page.evaluate(() => {
-        const main = document.querySelector("main, #app, [role='main'], .container, body");
-        const text = main ? main.innerText : document.body.innerText;
-        return {
-          hasElement: !!main,
-          textLength: text.length,
-          bodyHTML: document.body.innerHTML.length,
-        };
-      });
+          return {
+            htmlSize: html.length,
+            textLength: text.length,
+            elementCount: elements.length,
+            visibleElements: visibleElements,
+            hasMainContent: !!(
+              document.querySelector("main") ||
+              document.querySelector("[role='main']") ||
+              document.querySelector(".container") ||
+              document.querySelector(".content")
+            ),
+          };
+        });
 
-      console.log(`[Screenshot] 📊 Content Check (Attempt ${retryCount + 1}/${maxRetries}):`, {
-        textLength: contentInfo.textLength,
-        htmlSize: contentInfo.bodyHTML,
-      });
+        console.log(`[Screenshot] 📊 Content Status:`, {
+          htmlSize: pageContent.htmlSize,
+          textLength: pageContent.textLength,
+          elements: pageContent.elementCount,
+          visible: pageContent.visibleElements,
+          hasMain: pageContent.hasMainContent,
+        });
 
-      // More lenient check: accept if we have ANY meaningful content
-      hasContent = contentInfo.textLength > 100 || contentInfo.bodyHTML > 5000;
+        // Content is ready if:
+        // - HTML is substantial (>1000 bytes) AND
+        // - Either has main content area OR has visible elements (>10)
+        if (
+          pageContent.htmlSize > 1000 &&
+          (pageContent.hasMainContent || pageContent.visibleElements > 10)
+        ) {
+          contentReady = true;
+          console.log("[Screenshot] ✅ Content ready!");
+          break;
+        }
 
-      if (!hasContent && retryCount < maxRetries - 1) {
-        console.log("[Screenshot] ⏳ Content too small, waiting and retrying...");
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        await page.reload({ waitUntil: "domcontentloaded" });
-        retryCount++;
-      } else {
-        break;
+        // If page is completely empty, fail fast
+        if (pageContent.htmlSize < 100 && pageContent.elementCount < 5) {
+          console.log("[Screenshot] ❌ Page appears to be empty or broken.");
+          return null;
+        }
+
+        // Wait a bit before checking again
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // Try to trigger more content loading
+        await page.evaluate(() => {
+          // Scroll to trigger lazy loading
+          window.scrollBy(0, window.innerHeight);
+        });
+
+      } catch (checkError) {
+        console.error(`[Screenshot] ⚠️ Content check error: ${checkError.message}`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
-    if (!hasContent) {
-      console.log("[Screenshot] ⚠️ Page content still too small after retries, skipping screenshot.");
+    if (!contentReady) {
+      console.log("[Screenshot] ⚠️ Content did not load within timeout.");
       return null;
     }
+
+    // Scroll back to top before taking screenshot
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Take screenshot
     tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
@@ -285,6 +323,7 @@ async function captureProjectScreenshot(url, projectId) {
     tempPath = null;
 
     return { path: `images/projects/${fileName}`, time: totalTime };
+
   } catch (error) {
     console.error(`[Screenshot] ❌ Failed: ${error.message}`);
     if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
