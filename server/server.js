@@ -85,6 +85,93 @@ db.getConnection((err, connection) => {
 });
 
 // Professional Screenshot Engine
+// async function captureProjectScreenshot(url, projectId) {
+//   const startTime = Date.now();
+//   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
+
+//   let browser;
+//   let tempPath;
+
+//   try {
+//     // Launch Puppeteer
+//     // browser = await puppeteer.launch({
+//     //   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+//     //   headless: true,
+//     //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+//     // });
+//     browser = await puppeteer.launch({
+//       headless: true,
+//       args: ["--no-sandbox", "--disable-setuid-sandbox"],
+//     });
+
+//     const page = await browser.newPage();
+//     await page.setViewport({ width: 1280, height: 720 });
+
+//     // Navigate to URL
+//     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+//     // Wait for network to be idle or key container to appear
+//     try {
+//       await page.waitForNetworkIdle({ idleTime: 3000, timeout: 60000 });
+//     } catch {
+//       console.log("[Screenshot] ⚠️ Network idle timeout, continuing anyway.");
+//     }
+
+//     // Optional: ensure main content exists
+//     const hasContent = await page.evaluate(() => {
+//       const main = document.querySelector("main, #app, body");
+//       return main && main.innerText.length > 200;
+//     });
+
+//     if (!hasContent) {
+//       console.log(
+//         "[Screenshot] ⚠️ Page content too small, skipping screenshot.",
+//       );
+//       return null;
+//     }
+
+//     // Take screenshot
+//     tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
+//     await page.screenshot({ path: tempPath, fullPage: true });
+
+//     const totalTime = Math.floor((Date.now() - startTime) / 1000);
+//     console.log(`[Screenshot] 📸 Captured in ${totalTime}s`);
+
+//     // Upload to Cloudinary if configured
+//     if (hasCloudinaryConfig) {
+//       console.log("[Screenshot] ☁️ Uploading to Cloudinary...");
+//       const uploadResult = await cloudinary.uploader.upload(tempPath, {
+//         folder: "portfolio_projects",
+//         public_id: `project_${projectId}`,
+//         overwrite: true,
+//         invalidate: true,
+//       });
+
+//       fs.unlinkSync(tempPath);
+//       tempPath = null;
+
+//       console.log(`[Screenshot] ✅ Cloud URL: ${uploadResult.secure_url}`);
+//       return { path: uploadResult.secure_url, time: totalTime };
+//     }
+
+//     // Save locally
+//     const dir = path.join(__dirname, "images", "projects");
+//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+//     const fileName = `project_${projectId}_${Date.now()}.png`;
+//     const finalPath = path.join(dir, fileName);
+//     fs.renameSync(tempPath, finalPath);
+//     tempPath = null;
+
+//     return { path: `images/projects/${fileName}`, time: totalTime };
+//   } catch (error) {
+//     console.error(`[Screenshot] ❌ Failed: ${error.message}`);
+//     if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+//     return null;
+//   } finally {
+//     if (browser) await browser.close();
+//   }
+// }
 async function captureProjectScreenshot(url, projectId) {
   const startTime = Date.now();
   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
@@ -93,40 +180,74 @@ async function captureProjectScreenshot(url, projectId) {
   let tempPath;
 
   try {
+    // Detect if this is a Render-hosted site
+    const isRenderHosted = url.includes(".onrender.com");
+    const extraWaitTime = isRenderHosted ? 15000 : 5000; // Extra 15s for Render cold start
+
     // Launch Puppeteer
-    // browser = await puppeteer.launch({
-    //   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-    //   headless: true,
-    //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-    // });
     browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
     });
 
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 720 });
 
-    // Navigate to URL
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted (will wait longer)" : "External"}`);
 
-    // Wait for network to be idle or key container to appear
+    // Navigate to URL with longer timeout for Render sites
+    const navigationTimeout = isRenderHosted ? 90000 : 60000;
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: navigationTimeout });
+
+    // Wait for network to be idle
     try {
-      await page.waitForNetworkIdle({ idleTime: 3000, timeout: 60000 });
+      await page.waitForNetworkIdle({ idleTime: 3000, timeout: navigationTimeout });
     } catch {
       console.log("[Screenshot] ⚠️ Network idle timeout, continuing anyway.");
     }
 
-    // Optional: ensure main content exists
-    const hasContent = await page.evaluate(() => {
-      const main = document.querySelector("main, #app, body");
-      return main && main.innerText.length > 200;
-    });
+    // Extra wait for Render sites to fully render
+    if (isRenderHosted) {
+      console.log("[Screenshot] ⏳ Waiting extra time for Render service to fully load...");
+      await new Promise(resolve => setTimeout(resolve, extraWaitTime));
+    }
+
+    // Check for content with retry logic
+    let hasContent = false;
+    let retryCount = 0;
+    const maxRetries = isRenderHosted ? 3 : 1;
+
+    while (!hasContent && retryCount < maxRetries) {
+      const contentInfo = await page.evaluate(() => {
+        const main = document.querySelector("main, #app, [role='main'], .container, body");
+        const text = main ? main.innerText : document.body.innerText;
+        return {
+          hasElement: !!main,
+          textLength: text.length,
+          bodyHTML: document.body.innerHTML.length,
+        };
+      });
+
+      console.log(`[Screenshot] 📊 Content Check (Attempt ${retryCount + 1}/${maxRetries}):`, {
+        textLength: contentInfo.textLength,
+        htmlSize: contentInfo.bodyHTML,
+      });
+
+      // More lenient check: accept if we have ANY meaningful content
+      hasContent = contentInfo.textLength > 100 || contentInfo.bodyHTML > 5000;
+
+      if (!hasContent && retryCount < maxRetries - 1) {
+        console.log("[Screenshot] ⏳ Content too small, waiting and retrying...");
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        await page.reload({ waitUntil: "domcontentloaded" });
+        retryCount++;
+      } else {
+        break;
+      }
+    }
 
     if (!hasContent) {
-      console.log(
-        "[Screenshot] ⚠️ Page content too small, skipping screenshot.",
-      );
+      console.log("[Screenshot] ⚠️ Page content still too small after retries, skipping screenshot.");
       return null;
     }
 
