@@ -172,8 +172,6 @@ db.getConnection((err, connection) => {
 //     if (browser) await browser.close();
 //   }
 // }
-
-
 async function captureProjectScreenshot(url, projectId) {
   const startTime = Date.now();
   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
@@ -182,10 +180,8 @@ async function captureProjectScreenshot(url, projectId) {
   let tempPath;
 
   try {
-    // Detect if this is a Render-hosted site
     const isRenderHosted = url.includes(".onrender.com");
 
-    // Launch Puppeteer
     browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
@@ -196,11 +192,10 @@ async function captureProjectScreenshot(url, projectId) {
 
     console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted" : "External"}`);
 
-    // Navigate to URL - use 'networkidle2' for better JS rendering detection
     const navigationTimeout = isRenderHosted ? 90000 : 60000;
     try {
       await page.goto(url, { 
-        waitUntil: "networkidle2", // Wait for network to be mostly idle
+        waitUntil: "networkidle2", 
         timeout: navigationTimeout 
       });
     } catch (navError) {
@@ -208,10 +203,9 @@ async function captureProjectScreenshot(url, projectId) {
       return null;
     }
 
-    // CRITICAL: Wait for JavaScript to finish rendering
-    console.log("[Screenshot] ⏳ Waiting for JavaScript rendering...");
+    console.log("[Screenshot] ⏳ Waiting for content to render...");
     
-    const maxWaitTime = isRenderHosted ? 45000 : 30000;
+    const maxWaitTime = isRenderHosted ? 60000 : 30000; // Increased to 60s for Render
     const startWait = Date.now();
     let contentReady = false;
     let previousHtmlSize = 0;
@@ -219,31 +213,16 @@ async function captureProjectScreenshot(url, projectId) {
 
     while (Date.now() - startWait < maxWaitTime && !contentReady) {
       try {
-        // Wait for network idle to ensure JS has finished
-        try {
-          await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 5000 }).catch(() => {});
-        } catch {
-          // Timeout is expected here
-        }
-
-        // Check if page has meaningful content
         const pageContent = await page.evaluate(() => {
-          // Wait for body to have content
           const body = document.body;
           const html = body.innerHTML;
           const text = body.innerText.trim();
-          
-          // Count visible elements
           const allElements = body.querySelectorAll("*");
+          
           const visibleElements = Array.from(allElements).filter(el => {
             const style = window.getComputedStyle(el);
             const rect = el.getBoundingClientRect();
-            return (
-              style.display !== "none" && 
-              style.visibility !== "hidden" &&
-              rect.width > 0 &&
-              rect.height > 0
-            );
+            return (style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0);
           }).length;
 
           return {
@@ -251,114 +230,64 @@ async function captureProjectScreenshot(url, projectId) {
             textLength: text.length,
             elementCount: allElements.length,
             visibleElements: visibleElements,
-            hasMainContent: !!(
-              document.querySelector("main") ||
-              document.querySelector("[role='main']") ||
-              document.querySelector(".container") ||
-              document.querySelector(".content") ||
-              document.querySelector("header") ||
-              document.querySelector("nav")
-            ),
-            bodyClasses: body.className,
+            hasMainContent: !!(document.querySelector("main") || document.querySelector("header") || document.querySelector("nav")),
           };
         });
 
         console.log(`[Screenshot] 📊 Content Status:`, {
           htmlSize: pageContent.htmlSize,
           textLength: pageContent.textLength,
-          elements: pageContent.elementCount,
-          visible: pageContent.visibleElements,
-          hasMain: pageContent.hasMainContent,
+          visible: pageContent.visibleElements
         });
 
-        // Check if HTML size is stabilizing (content has finished rendering)
-        if (Math.abs(pageContent.htmlSize - previousHtmlSize) < 100) {
+        if (Math.abs(pageContent.htmlSize - previousHtmlSize) < 100 && pageContent.htmlSize > 500) {
           stableCount++;
         } else {
           stableCount = 0;
         }
         previousHtmlSize = pageContent.htmlSize;
 
-        // Content is ready if:
-        // - HTML is substantial (>2000 bytes) AND
-        // - Has visible elements (>5) AND
-        // - Either has main content area OR has header/nav AND
-        // - HTML size has been stable for 2 checks
-        if (
-          pageContent.htmlSize > 2000 &&
-          pageContent.visibleElements > 5 &&
-          (pageContent.hasMainContent || pageContent.elementCount > 20) &&
-          stableCount >= 2
-        ) {
+        // Success condition
+        if (pageContent.htmlSize > 1000 && pageContent.visibleElements > 5 && stableCount >= 2) {
           contentReady = true;
           console.log("[Screenshot] ✅ Content ready and stable!");
           break;
         }
 
-        // If page is completely empty after 10 seconds, fail fast
-        const elapsedSeconds = Math.floor((Date.now() - startWait) / 1000);
-        if (elapsedSeconds > 10 && pageContent.htmlSize < 500) {
-          console.log("[Screenshot] ❌ Page appears to be empty or broken after 10s.");
-          return null;
-        }
-
-        // Wait before checking again
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Scroll to trigger lazy loading and JS rendering
-        await page.evaluate(() => {
-          window.scrollBy(0, window.innerHeight / 2);
-        });
-
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3s between checks
+        await page.evaluate(() => window.scrollBy(0, 200)); // Subtle scroll to wake up JS
       } catch (checkError) {
-        console.error(`[Screenshot] ⚠️ Content check error: ${checkError.message}`);
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
     if (!contentReady) {
-      console.log("[Screenshot] ⚠️ Content did not load within timeout.");
+      console.log("[Screenshot] ⚠️ Content did not load or stabilize within timeout.");
       return null;
     }
 
-    // Scroll back to top before taking screenshot
     await page.evaluate(() => window.scrollTo(0, 0));
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Take screenshot
     tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
     await page.screenshot({ path: tempPath, fullPage: true });
 
     const totalTime = Math.floor((Date.now() - startTime) / 1000);
     console.log(`[Screenshot] 📸 Captured in ${totalTime}s`);
 
-    // Upload to Cloudinary if configured
     if (hasCloudinaryConfig) {
-      console.log("[Screenshot] ☁️ Uploading to Cloudinary...");
       const uploadResult = await cloudinary.uploader.upload(tempPath, {
         folder: "portfolio_projects",
         public_id: `project_${projectId}`,
         overwrite: true,
         invalidate: true,
       });
-
       fs.unlinkSync(tempPath);
-      tempPath = null;
-
       console.log(`[Screenshot] ✅ Cloud URL: ${uploadResult.secure_url}`);
       return { path: uploadResult.secure_url, time: totalTime };
     }
 
-    // Save locally
-    const dir = path.join(__dirname, "images", "projects");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-
-    const fileName = `project_${projectId}_${Date.now()}.png`;
-    const finalPath = path.join(dir, fileName);
-    fs.renameSync(tempPath, finalPath);
-    tempPath = null;
-
-    return { path: `images/projects/${fileName}`, time: totalTime };
+    return { path: `temp_${projectId}.png`, time: totalTime };
 
   } catch (error) {
     console.error(`[Screenshot] ❌ Failed: ${error.message}`);
@@ -368,6 +297,7 @@ async function captureProjectScreenshot(url, projectId) {
     if (browser) await browser.close();
   }
 }
+
 
 // --- PUBLIC API ROUTES ---
 
