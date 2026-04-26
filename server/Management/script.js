@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 2. Visual Feedback: Disable button and show loading state
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<div class="spinner"></div> Adding Project...to your Projects Page....`;
+            submitBtn.innerHTML = `<div class="spinner"></div> Adding Project`;
 
             const formData = new FormData(this);
             const projectData = Object.fromEntries(formData.entries());
