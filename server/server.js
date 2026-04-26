@@ -1,3 +1,5 @@
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 const cloudinary = require("cloudinary").v2;
@@ -84,94 +86,225 @@ db.getConnection((err, connection) => {
   }
 });
 
-// Professional Screenshot Engine
-// async function captureProjectScreenshot(url, projectId) {
-//   const startTime = Date.now();
-//   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
+// ============================================
+// AUTHENTICATION ROUTES
+// ============================================
 
-//   let browser;
-//   let tempPath;
+// REGISTER: Create the first admin user (or additional users)
+app.post("/api/auth/register", async (req, res) => {
+  const { email, password } = req.body;
 
-//   try {
-//     // Launch Puppeteer
-//     // browser = await puppeteer.launch({
-//     //   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-//     //   headless: true,
-//     //   args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-//     // });
-//     browser = await puppeteer.launch({
-//       headless: true,
-//       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-//     });
+  // Validation
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
 
-//     const page = await browser.newPage();
-//     await page.setViewport({ width: 1280, height: 720 });
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters." });
+  }
 
-//     // Navigate to URL
-//     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  try {
+    // Check if user already exists
+    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: "Database error." });
+      }
 
-//     // Wait for network to be idle or key container to appear
-//     try {
-//       await page.waitForNetworkIdle({ idleTime: 3000, timeout: 60000 });
-//     } catch {
-//       console.log("[Screenshot] ⚠️ Network idle timeout, continuing anyway.");
-//     }
+      if (results.length > 0) {
+        return res.status(409).json({ error: "Email already registered." });
+      }
 
-//     // Optional: ensure main content exists
-//     const hasContent = await page.evaluate(() => {
-//       const main = document.querySelector("main, #app, body");
-//       return main && main.innerText.length > 200;
-//     });
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
 
-//     if (!hasContent) {
-//       console.log(
-//         "[Screenshot] ⚠️ Page content too small, skipping screenshot.",
-//       );
-//       return null;
-//     }
+      // Insert user into database
+      db.query(
+        "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)",
+        [email, hashedPassword, "admin"],
+        (insertErr) => {
+          if (insertErr) {
+            return res.status(500).json({ error: "Failed to register user." });
+          }
 
-//     // Take screenshot
-//     tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
-//     await page.screenshot({ path: tempPath, fullPage: true });
+          console.log(`[Auth] ✅ New admin user registered: ${email}`);
+          res.status(201).json({ message: "User registered successfully! You can now login." });
+        }
+      );
+    });
+  } catch (error) {
+    console.error("[Auth] ❌ Registration error:", error.message);
+    res.status(500).json({ error: "Registration failed." });
+  }
+});
 
-//     const totalTime = Math.floor((Date.now() - startTime) / 1000);
-//     console.log(`[Screenshot] 📸 Captured in ${totalTime}s`);
+// LOGIN: Authenticate user and return JWT token
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
 
-//     // Upload to Cloudinary if configured
-//     if (hasCloudinaryConfig) {
-//       console.log("[Screenshot] ☁️ Uploading to Cloudinary...");
-//       const uploadResult = await cloudinary.uploader.upload(tempPath, {
-//         folder: "portfolio_projects",
-//         public_id: `project_${projectId}`,
-//         overwrite: true,
-//         invalidate: true,
-//       });
+  // Validation
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
 
-//       fs.unlinkSync(tempPath);
-//       tempPath = null;
+  try {
+    // Find user by email
+    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: "Database error." });
+      }
 
-//       console.log(`[Screenshot] ✅ Cloud URL: ${uploadResult.secure_url}`);
-//       return { path: uploadResult.secure_url, time: totalTime };
-//     }
+      if (results.length === 0) {
+        return res.status(401).json({ error: "Invalid email or password." });
+      }
 
-//     // Save locally
-//     const dir = path.join(__dirname, "images", "projects");
-//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const user = results[0];
 
-//     const fileName = `project_${projectId}_${Date.now()}.png`;
-//     const finalPath = path.join(dir, fileName);
-//     fs.renameSync(tempPath, finalPath);
-//     tempPath = null;
+      // Compare password with hash
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
-//     return { path: `images/projects/${fileName}`, time: totalTime };
-//   } catch (error) {
-//     console.error(`[Screenshot] ❌ Failed: ${error.message}`);
-//     if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-//     return null;
-//   } finally {
-//     if (browser) await browser.close();
-//   }
-// }
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Invalid email or password." });
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" } // Token expires in 7 days
+      );
+
+      console.log(`[Auth] ✅ User logged in: ${email}`);
+      res.json({ 
+        message: "Login successful!", 
+        token: token,
+        user: { id: user.id, email: user.email, role: user.role }
+      });
+    });
+  } catch (error) {
+    console.error("[Auth] ❌ Login error:", error.message);
+    res.status(500).json({ error: "Login failed." });
+  }
+});
+
+// VERIFY TOKEN: Check if a token is valid
+app.post("/api/auth/verify", (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Token is required." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({ valid: true, user: decoded });
+  } catch (error) {
+    res.status(401).json({ valid: false, error: "Invalid or expired token." });
+  }
+});
+
+// LOGOUT: Clear token on client side (optional backend endpoint)
+app.post("/api/auth/logout", (req, res) => {
+  console.log("[Auth] ✅ User logged out");
+  res.json({ message: "Logged out successfully." });
+});
+
+// REQUEST ACCESS: Submit a request for admin access
+app.post("/api/auth/request-access", (req, res) => {
+  const { name, email, reason } = req.body;
+
+  if (!name || !email || !reason) {
+    return res.status(400).json({ error: "Name, email, and reason are required." });
+  }
+
+  db.query(
+    "INSERT INTO access_requests (name, email, reason) VALUES (?, ?, ?)",
+    [name, email, reason],
+    (err) => {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+          return res.status(409).json({ error: "This email has already requested access." });
+        }
+        return res.status(500).json({ error: "Failed to submit request." });
+      }
+
+      console.log(`[Auth] 📧 Access request from: ${email}`);
+      res.status(201).json({ message: "Access request submitted successfully!" });
+    }
+  );
+});
+
+// GET ACCESS REQUESTS: Admin endpoint to view pending requests
+app.get("/api/auth/access-requests", (req, res) => {
+  // TODO: Add middleware to verify admin token
+  db.query(
+    "SELECT * FROM access_requests WHERE status = 'pending' ORDER BY created_at DESC",
+    (err, results) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to fetch requests." });
+      }
+      res.json(results);
+    }
+  );
+});
+
+// APPROVE ACCESS REQUEST: Admin endpoint
+app.post("/api/auth/access-requests/:id/approve", (req, res) => {
+  // TODO: Add middleware to verify admin token
+  const { id } = req.params;
+
+  db.query(
+    "UPDATE access_requests SET status = 'approved' WHERE id = ?",
+    [id],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to approve request." });
+      }
+      res.json({ message: "Access request approved!" });
+    }
+  );
+});
+
+// DENY ACCESS REQUEST: Admin endpoint
+app.post("/api/auth/access-requests/:id/deny", (req, res) => {
+  // TODO: Add middleware to verify admin token
+  const { id } = req.params;
+
+  db.query(
+    "UPDATE access_requests SET status = 'denied' WHERE id = ?",
+    [id],
+    (err) => {
+      if (err) {
+        return res.status(500).json({ error: "Failed to deny request." });
+      }
+      res.json({ message: "Access request denied." });
+    }
+  );
+});
+
+// ============================================
+// MIDDLEWARE: Verify JWT Token
+// ============================================
+
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1]; // Extract token from "Bearer <token>"
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: "Invalid or expired token." });
+  }
+}
+
+// Export middleware for use in other files
+module.exports = { verifyToken };
+
+// Screenshoot function
 async function captureProjectScreenshot(url, projectId) {
   const startTime = Date.now();
   console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
