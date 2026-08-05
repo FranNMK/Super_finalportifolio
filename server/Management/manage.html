@@ -91,7 +91,13 @@
                             <input type="number" id="projectYear" name="year" min="1900" max="2100" value="2026"
                                 required>
                         </div>
-                        <!-- image_path will be automated to take screenshots automatically using JavaScript and puppeteer package -->
+                        <div class="form-group">
+                            <label>Project Image <span style="color:#888;font-weight:normal;">(optional)</span>:</label>
+                            <div id="addImagePreview" style="margin-bottom:10px;"></div>
+                            <input type="file" id="addImageFile" accept="image/*"
+                                style="width:100%;padding:8px;border:1px solid #ced4da;border-radius:4px;margin-bottom:6px;">
+                            <small style="color:#888;display:block;">You can also add/change the image later via Edit.</small>
+                        </div>
                         <button type="submit" class="btn-primary">Add Project</button>
                     </form>
                 </div>
@@ -102,6 +108,7 @@
                         <thead>
                             <tr>
                                 <th>S/No</th>
+                                <th>Image</th>
                                 <th>Name</th>
                                 <th>Year</th>
                                 <th>Live URL</th>

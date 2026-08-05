@@ -37,9 +37,10 @@ async function fetchProjects(year = 'all') {
 
         container.innerHTML = projects.map(project => `
             <div class="project-card">
-                <img src="${project.image_path || 'images/default.jpg'}"
-                     alt="${project.name}"
-                     onerror="this.src='images/default.jpg';">
+                ${project.image_path
+                    ? `<img src="${project.image_path}" alt="${project.name}" onerror="this.style.display='none'">`
+                    : `<div class="project-card-no-image"><span>No Preview</span></div>`
+                }
                 <h3>${project.name}</h3>
                 <p>${project.description || ''}</p>
                 <div class="links">
