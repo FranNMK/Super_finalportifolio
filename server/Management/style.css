@@ -702,3 +702,77 @@ body {
 .btn-logout:hover {
     background-color: #e63946;
 }
+
+/* ── PAGE LOAD OVERLAY ─────────────────────────────────── */
+#page-loader {
+    position: fixed;
+    inset: 0;
+    background: #1e2533;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    gap: 18px;
+    transition: opacity 0.4s ease;
+}
+
+#page-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.page-loader-ring {
+    width: 54px;
+    height: 54px;
+    border: 5px solid rgba(255,255,255,0.1);
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+}
+
+.page-loader-text {
+    color: #94a3b8;
+    font-size: 14px;
+    font-family: 'Segoe UI', sans-serif;
+    letter-spacing: 0.3px;
+}
+
+/* ── SECTION SKELETON ──────────────────────────────────── */
+.skeleton-row td {
+    padding: 14px 12px !important;
+}
+
+.skel {
+    background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+    background-size: 400% 100%;
+    border-radius: 6px;
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+    display: inline-block;
+    height: 14px;
+}
+
+@keyframes skeleton-sweep {
+    0%   { background-position: 100% 50%; }
+    100% { background-position: 0%   50%; }
+}
+
+/* ── SECTION LOAD SPINNER (inside tables) ──────────────── */
+.table-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.table-loader .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #dee2e6;
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}

@@ -83,8 +83,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Initial load
-    loadProjectsTable();
+    // ── Dismiss page loader once DOM + first data load is done ──
+    async function initDashboard() {
+        await loadProjectsTable();
+        const loader = document.getElementById('page-loader');
+        if (loader) {
+            loader.classList.add('fade-out');
+            setTimeout(() => loader.remove(), 420);
+        }
+    }
+    initDashboard();
 
     // ── Add Project image preview ─────────────────────────────────────────────
     const addImageInput = document.getElementById('addImageFile');
@@ -153,7 +161,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadProjectsTable() {
         const tableBody = document.getElementById('projectsTableBody');
         if (!tableBody) return;
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#007bff;"></div></td></tr>';
+        // Skeleton rows
+        tableBody.innerHTML = Array(4).fill(0).map(() => `
+            <tr class="skeleton-row">
+                <td><span class="skel" style="width:24px"></span></td>
+                <td><span class="skel" style="width:60px;height:40px;border-radius:4px;"></span></td>
+                <td><span class="skel" style="width:120px"></span></td>
+                <td><span class="skel" style="width:40px"></span></td>
+                <td><span class="skel" style="width:50px"></span></td>
+                <td><span class="skel" style="width:60px"></span></td>
+                <td><span class="skel" style="width:100px"></span></td>
+            </tr>`).join('');
 
         try {
             const res = await fetch(`${API_BASE_URL}/projects`, { headers: authHeaders() });
@@ -370,7 +388,13 @@ async function uploadProjectImage(projectId, file) {
 async function loadRecycleBin() {
     const body = document.getElementById('recycle-bin-body');
     if (!body) return;
-    body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#dc3545;"></div></td></tr>';
+    body.innerHTML = Array(3).fill(0).map(() => `
+        <tr class="skeleton-row">
+            <td><span class="skel" style="width:20px"></span></td>
+            <td><span class="skel" style="width:130px"></span></td>
+            <td><span class="skel" style="width:40px"></span></td>
+            <td><span class="skel" style="width:120px"></span></td>
+        </tr>`).join('');
 
     const API_BASE_URL = window.location.hostname === 'localhost'
         ? 'http://localhost:5000/api'
@@ -592,7 +616,15 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadSkillsTable() {
     const body = document.getElementById('skillsTableBody');
     if (!body) return;
-    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#007bff;"></div></td></tr>';
+    body.innerHTML = Array(5).fill(0).map(() => `
+        <tr class="skeleton-row">
+            <td><span class="skel" style="width:20px"></span></td>
+            <td><span class="skel" style="width:28px;height:28px;border-radius:4px;"></span></td>
+            <td><span class="skel" style="width:140px"></span></td>
+            <td><span class="skel" style="width:30px"></span></td>
+            <td><span class="skel" style="width:36px"></span></td>
+            <td><span class="skel" style="width:110px"></span></td>
+        </tr>`).join('');
     const API = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
     try {
         const res = await fetch(`${API}/admin/skills`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } });
