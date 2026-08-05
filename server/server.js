@@ -471,14 +471,14 @@ app.get("/api/admin/projects/:id", verifyToken, (req, res) => {
 
 // ADD PROJECT
 app.post("/api/admin/projects", verifyToken, (req, res) => {
-  const { name, description, live_url, github_url, year } = req.body;
+  const { name, description, live_url, github_url, year, demo_video_url } = req.body;
   if (!name || !year)
     return res.status(400).json({ error: "Name and Year are required." });
 
   const sql =
-    "INSERT INTO projects (name, description, live_url, github_url, year) VALUES (?, ?, ?, ?, ?)";
+    "INSERT INTO projects (name, description, live_url, github_url, year, demo_video_url) VALUES (?, ?, ?, ?, ?, ?)";
 
-  db.query(sql, [name, description, live_url, github_url, year], (err, result) => {
+  db.query(sql, [name, description, live_url, github_url, year, demo_video_url || null], (err, result) => {
     if (err) {
       console.error("[Error] ❌ DB Insert failed:", err.message);
       return res.status(500).json({ error: "Database error: " + err.message });
@@ -492,7 +492,7 @@ app.post("/api/admin/projects", verifyToken, (req, res) => {
 // UPDATE PROJECT
 app.put("/api/admin/projects/:id", verifyToken, (req, res) => {
   const projectId = Number(req.params.id);
-  const { name, description, live_url, github_url, year } = req.body;
+  const { name, description, live_url, github_url, year, demo_video_url } = req.body;
 
   if (!Number.isInteger(projectId) || projectId <= 0)
     return res.status(400).json({ error: "Invalid project ID." });
@@ -504,11 +504,11 @@ app.put("/api/admin/projects/:id", verifyToken, (req, res) => {
     return res.status(400).json({ error: "Year must be between 1900 and 2100." });
 
   const sql =
-    "UPDATE projects SET name = ?, description = ?, live_url = ?, github_url = ?, year = ? WHERE id = ?";
+    "UPDATE projects SET name = ?, description = ?, live_url = ?, github_url = ?, year = ?, demo_video_url = ? WHERE id = ?";
 
   db.query(
     sql,
-    [name, description || null, live_url || null, github_url || null, parsedYear, projectId],
+    [name, description || null, live_url || null, github_url || null, parsedYear, demo_video_url || null, projectId],
     (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!result || result.affectedRows === 0)

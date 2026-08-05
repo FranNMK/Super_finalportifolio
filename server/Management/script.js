@@ -226,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('editProjectLiveUrl').value = p.live_url || '';
             document.getElementById('editProjectGithubUrl').value = p.github_url || '';
             document.getElementById('editProjectYear').value = p.year || new Date().getFullYear();
+            document.getElementById('editProjectDemoVideoUrl').value = p.demo_video_url || '';
 
             // Show current image in the modal
             const preview = document.getElementById('editImagePreview');
@@ -254,11 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!projectId) { showNotification('Missing project ID.', 'error'); return; }
 
-            const name      = document.getElementById('editProjectName')?.value.trim() || '';
-            const desc      = document.getElementById('editProjectDescription')?.value.trim() || '';
-            const liveUrl   = document.getElementById('editProjectLiveUrl')?.value.trim() || '';
-            const githubUrl = document.getElementById('editProjectGithubUrl')?.value.trim() || '';
-            const yearVal   = document.getElementById('editProjectYear')?.value.trim() || '';
+            const name         = document.getElementById('editProjectName')?.value.trim() || '';
+            const desc         = document.getElementById('editProjectDescription')?.value.trim() || '';
+            const liveUrl      = document.getElementById('editProjectLiveUrl')?.value.trim() || '';
+            const githubUrl    = document.getElementById('editProjectGithubUrl')?.value.trim() || '';
+            const yearVal      = document.getElementById('editProjectYear')?.value.trim() || '';
+            const demoVideoUrl = document.getElementById('editProjectDemoVideoUrl')?.value.trim() || '';
 
             if (!name) { showNotification('Project name is required.', 'error'); return; }
             const parsedYear = Number(yearVal);
@@ -273,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const res = await fetch(`${API_BASE_URL}/admin/projects/${projectId}`, {
                     method: 'PUT',
                     headers: authHeaders(),
-                    body: JSON.stringify({ name, description: desc, live_url: liveUrl, github_url: githubUrl, year: parsedYear }),
+                    body: JSON.stringify({ name, description: desc, live_url: liveUrl, github_url: githubUrl, year: parsedYear, demo_video_url: demoVideoUrl || null }),
                 });
                 const result = await res.json();
                 if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);

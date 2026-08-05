@@ -99,10 +99,21 @@
     transform: translateY(-5px);
 }
 
-.project-card img {
+/* ── Project card image: show whole image, no cropping ── */
+.project-card-media {
     width: 100%;
     height: 200px;
-    object-fit: cover;
+    background: #f0f1f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.project-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     display: block;
 }
 
@@ -137,24 +148,79 @@
 }
 
 .project-card .links {
-    padding: 0 15px 15px;
+    padding: 12px 15px 16px;
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
+/* ── Professional link buttons ── */
 .project-card .links a {
-    display: inline-block;
-    background-color: #007bff;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
     text-decoration: none;
-    font-size: 0.9em;
-    transition: background-color 0.3s ease;
+    font-size: 0.82em;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
 }
 
-.project-card .links a:hover {
-    background-color: #0056b3;
+.project-card .links a.link-live {
+    background-color: #0a8f4f;
+    color: #fff;
+    border-color: #0a8f4f;
+}
+
+.project-card .links a.link-live:hover {
+    background-color: #076e3c;
+    border-color: #076e3c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(10, 143, 79, 0.3);
+}
+
+.project-card .links a.link-github {
+    background-color: #fff;
+    color: #1f2328;
+    border-color: #d0d7de;
+}
+
+.project-card .links a.link-github:hover {
+    background-color: #f6f8fa;
+    border-color: #aab0b8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.project-card .links a.link-video {
+    background-color: #c0392b;
+    color: #fff;
+    border-color: #c0392b;
+}
+
+.project-card .links a.link-video:hover {
+    background-color: #962d22;
+    border-color: #962d22;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(192, 57, 43, 0.3);
+}
+
+/* ── Demo video embed inside card ── */
+.project-card-video {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    display: block;
+}
+
+.project-card-video iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
 }
 
 /* Responsive adjustments */

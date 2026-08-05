@@ -38,14 +38,19 @@ async function fetchProjects(year = 'all') {
         container.innerHTML = projects.map(project => `
             <div class="project-card">
                 ${project.image_path
-                    ? `<img src="${project.image_path}" alt="${project.name}" onerror="this.style.display='none'">`
+                    ? `<div class="project-card-media"><img src="${project.image_path}" alt="${project.name}" onerror="this.parentElement.outerHTML='<div class=project-card-no-image><span>No Preview</span></div>'"></div>`
                     : `<div class="project-card-no-image"><span>No Preview</span></div>`
                 }
                 <h3>${project.name}</h3>
                 <p>${project.description || ''}</p>
+                ${project.demo_video_url ? `
+                <div class="project-card-video">
+                    <iframe src="${project.demo_video_url}" title="${project.name} demo" allowfullscreen loading="lazy"></iframe>
+                </div>` : ''}
                 <div class="links">
-                    ${project.live_url ? `<a href="${project.live_url}" target="_blank">Live</a>` : ''}
-                    ${project.github_url ? `<a href="${project.github_url}" target="_blank">GitHub</a>` : ''}
+                    ${project.live_url ? `<a href="${project.live_url}" target="_blank" class="link-live"><i class="fas fa-external-link-alt"></i> Live Demo</a>` : ''}
+                    ${project.github_url ? `<a href="${project.github_url}" target="_blank" class="link-github"><i class="fab fa-github"></i> GitHub</a>` : ''}
+                    ${project.demo_video_url ? `<a href="${project.demo_video_url}" target="_blank" class="link-video"><i class="fab fa-youtube"></i> Demo Video</a>` : ''}
                 </div>
             </div>
         `).join('');
