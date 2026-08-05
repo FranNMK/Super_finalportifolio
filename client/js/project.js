@@ -68,12 +68,21 @@ async function fetchProjects(year = 'all') {
 
         container.innerHTML = projects.map(project => {
             const embedUrl = toEmbedUrl(project.demo_video_url);
+            const hasLinks = project.live_url || project.github_url || project.demo_video_url;
             return `
             <div class="project-card">
-                ${project.image_path
-                    ? `<div class="project-card-media"><img src="${project.image_path}" alt="${project.name}" onerror="this.parentElement.outerHTML='<div class=project-card-no-image><span>No Preview</span></div>'"></div>`
-                    : `<div class="project-card-no-image"><span>No Preview</span></div>`
-                }
+                <div class="project-card-left">
+                    ${project.image_path
+                        ? `<div class="project-card-media"><img src="${project.image_path}" alt="${project.name}" onerror="this.parentElement.outerHTML='<div class=project-card-no-image><span>No Preview</span></div>'"></div>`
+                        : `<div class="project-card-no-image"><span>No Preview</span></div>`
+                    }
+                    ${hasLinks ? `
+                    <div class="project-card-links">
+                        ${project.live_url ? `<a href="${project.live_url}" target="_blank" class="link-live"><i class="fas fa-external-link-alt"></i> Live Demo</a>` : ''}
+                        ${project.github_url ? `<a href="${project.github_url}" target="_blank" class="link-github"><i class="fab fa-github"></i> GitHub</a>` : ''}
+                        ${project.demo_video_url ? `<a href="${project.demo_video_url}" target="_blank" class="link-video"><i class="fab fa-youtube"></i> Demo Video</a>` : ''}
+                    </div>` : ''}
+                </div>
                 <div class="project-card-body">
                     <h3>${project.name}</h3>
                     <p>${project.description || ''}</p>
@@ -81,11 +90,6 @@ async function fetchProjects(year = 'all') {
                     <div class="project-card-video">
                         <iframe src="${embedUrl}" title="${project.name} demo" allowfullscreen loading="lazy"></iframe>
                     </div>` : ''}
-                    <div class="links">
-                        ${project.live_url ? `<a href="${project.live_url}" target="_blank" class="link-live"><i class="fas fa-external-link-alt"></i> Live Demo</a>` : ''}
-                        ${project.github_url ? `<a href="${project.github_url}" target="_blank" class="link-github"><i class="fab fa-github"></i> GitHub</a>` : ''}
-                        ${project.demo_video_url ? `<a href="${project.demo_video_url}" target="_blank" class="link-video"><i class="fab fa-youtube"></i> Demo Video</a>` : ''}
-                    </div>
                 </div>
             </div>`;
         }).join('');
