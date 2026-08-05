@@ -44,10 +44,6 @@ const upload = multer({
 
 // ── DB config ────────────────────────────────────────────────────────────────
 const app = express();
-const ROOT_DIR = path.resolve(__dirname, "..");
-const CLIENT_DIR = path.join(ROOT_DIR, "client");
-const MANAGEMENT_DIR = path.join(__dirname, "Management");
-const SERVER_IMAGES_DIR = path.join(__dirname, "images");
 
 app.use(cors());
 app.use(express.json());
@@ -633,19 +629,6 @@ app.delete("/api/admin/projects/:id/permanent", verifyToken, (req, res) => {
       res.json({ message: "Project permanently deleted from system." });
     });
   });
-});
-
-// ── STATIC FILE SERVING ──────────────────────────────────────────────────────
-app.use(express.static(CLIENT_DIR));
-app.use("/Management", express.static(MANAGEMENT_DIR));
-app.use(
-  "/images/projects",
-  express.static(path.join(SERVER_IMAGES_DIR, "projects")),
-);
-app.use("/images", express.static(path.join(CLIENT_DIR, "images")));
-
-app.get("/{*any}", (req, res) => {
-  res.sendFile(path.join(CLIENT_DIR, "index.html"));
 });
 
 // Export for Vercel serverless — also listen locally for `npm start`

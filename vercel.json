@@ -1,13 +1,12 @@
 {
   "version": 2,
   "builds": [
-    { "src": "server/server.js", "use": "@vercel/node" },
-    { "src": "client/**",        "use": "@vercel/static" }
+    { "src": "server/server.js",      "use": "@vercel/node"   },
+    { "src": "client/**",             "use": "@vercel/static" },
+    { "src": "server/Management/**",  "use": "@vercel/static" }
   ],
   "rewrites": [
-    { "source": "/api/:path*",        "destination": "/server/server.js" },
-    { "source": "/Management/:path*", "destination": "/server/Management/:path*" },
-    { "source": "/images/:path*",     "destination": "/client/images/:path*" },
-    { "source": "/:path*",            "destination": "/client/:path*" }
+    { "source": "/api/:path*", "destination": "/server/server.js" },
+    { "source": "/:path*",     "destination": "/client/:path*"    }
   ]
 }
