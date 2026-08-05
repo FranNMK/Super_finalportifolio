@@ -150,8 +150,9 @@
 .project-card .links {
     padding: 12px 15px 16px;
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
 }
 
 /* ── Professional link buttons ── */

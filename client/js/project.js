@@ -5,6 +5,37 @@ const API_BASE_URL = window.location.hostname === 'localhost'
 
 
 
+/**
+ * Convert any YouTube URL format to a proper embed URL.
+ * Returns null for non-YouTube / Vimeo URLs that are already embeds,
+ * or passes them through unchanged if they already contain /embed/.
+ *
+ * Handles:
+ *   https://www.youtube.com/watch?v=VIDEO_ID
+ *   https://youtu.be/VIDEO_ID
+ *   https://youtube.com/shorts/VIDEO_ID
+ *   https://www.youtube.com/embed/VIDEO_ID  (already correct — pass through)
+ *   https://player.vimeo.com/video/ID       (already correct — pass through)
+ *   null / undefined / empty string         (returns null)
+ */
+function toEmbedUrl(url) {
+    if (!url) return null;
+
+    // Already an embed URL — use as-is
+    if (/\/embed\/|player\.vimeo\.com/i.test(url)) return url;
+
+    // youtu.be/VIDEO_ID
+    const shortMatch = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/);
+    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+
+    // youtube.com/watch?v=VIDEO_ID  or  youtube.com/shorts/VIDEO_ID
+    const watchMatch = url.match(/(?:v=|shorts\/)([A-Za-z0-9_-]+)/);
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+
+    // Unknown format — skip the iframe to avoid reCAPTCHA / consent pages
+    return null;
+}
+
 function showProjectsSpinner() {
     const container = document.getElementById('projects-container');
     if (!container) return;
@@ -35,7 +66,9 @@ async function fetchProjects(year = 'all') {
             return;
         }
 
-        container.innerHTML = projects.map(project => `
+        container.innerHTML = projects.map(project => {
+            const embedUrl = toEmbedUrl(project.demo_video_url);
+            return `
             <div class="project-card">
                 ${project.image_path
                     ? `<div class="project-card-media"><img src="${project.image_path}" alt="${project.name}" onerror="this.parentElement.outerHTML='<div class=project-card-no-image><span>No Preview</span></div>'"></div>`
@@ -43,17 +76,17 @@ async function fetchProjects(year = 'all') {
                 }
                 <h3>${project.name}</h3>
                 <p>${project.description || ''}</p>
-                ${project.demo_video_url ? `
+                ${embedUrl ? `
                 <div class="project-card-video">
-                    <iframe src="${project.demo_video_url}" title="${project.name} demo" allowfullscreen loading="lazy"></iframe>
+                    <iframe src="${embedUrl}" title="${project.name} demo" allowfullscreen loading="lazy"></iframe>
                 </div>` : ''}
                 <div class="links">
                     ${project.live_url ? `<a href="${project.live_url}" target="_blank" class="link-live"><i class="fas fa-external-link-alt"></i> Live Demo</a>` : ''}
                     ${project.github_url ? `<a href="${project.github_url}" target="_blank" class="link-github"><i class="fab fa-github"></i> GitHub</a>` : ''}
                     ${project.demo_video_url ? `<a href="${project.demo_video_url}" target="_blank" class="link-video"><i class="fab fa-youtube"></i> Demo Video</a>` : ''}
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
 
     } catch (error) {
         console.error("Fetch failed:", error);
