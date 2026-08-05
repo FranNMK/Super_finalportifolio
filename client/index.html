@@ -120,16 +120,15 @@
         });
     </script>
 
-    <!-- Hamburger Menu Script -->
+    <!-- Hamburger + Scroll Navbar -->
     <script>
-
-        const menuToggle = document.getElementById("menu-toggle");
-        const navLinks = document.getElementById("nav-links");
-
-        menuToggle.addEventListener("click", () => {
-            navLinks.classList.toggle("active");
+        document.getElementById("menu-toggle").addEventListener("click", () => {
+            document.getElementById("nav-links").classList.toggle("active");
         });
-
+        // Sticky navbar glass effect on scroll
+        window.addEventListener('scroll', () => {
+            document.querySelector('header').classList.toggle('scrolled', window.scrollY > 40);
+        });
     </script>
 
 </body>

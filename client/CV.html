@@ -1,579 +1,502 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Francis Kienji CV</title>
-
+    <title>Francis Mwangi Kienji — CV</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
+        /* ─── RESET ─────────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ─── PAGE SHELL ────────────────────────────────────────── */
         body {
-            background: #021827;
+            background: #e8e8e8;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
+            font-size: 13px;
+            color: #1a1a1a;
         }
 
-        /* DOWNLOAD BUTTON */
-
-        .download-btn {
-            display: block;
-            margin: 30px auto;
-            padding: 12px 25px;
-            background: #00c853;
-            color: white;
-            border: none;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .download-btn:hover {
-            background: #00a844;
-        }
-
-        .action-buttons {
+        /* ─── ACTION BUTTONS (hidden on print) ──────────────────── */
+        .action-bar {
             display: flex;
             justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
             gap: 12px;
-            margin: 30px auto 10px;
+            padding: 24px 16px 10px;
         }
 
-        .action-buttons .download-btn {
-            display: inline-block;
-            margin: 0;
-        }
-
-        .print-btn {
-            padding: 12px 25px;
-            background: #173a5e;
-            color: white;
-            border: none;
-            font-size: 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .print-btn:hover {
-            background: #0f2b46;
-        }
-
-        /* CV CONTAINER */
-
-        .cv-container {
-            width: 850px;
-            margin: 30px auto;
-            display: flex;
-            background: white;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        /* LEFT SIDE */
-
-        .left {
-            width: 35%;
-            background: linear-gradient(180deg, #021827, #05233b);
-            color: white;
-            padding: 30px;
-        }
-
-        .profile {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .profile img {
-            width: 130px;
-            height: 130px;
-            border-radius: 50%;
-            border: 5px solid white;
-            object-fit: cover;
-        }
-
-        /* SECTION TITLES */
-
-        .section-title {
-            background: white;
-            color: #021827;
-            text-align: center;
-            padding: 7px;
-            border-radius: 20px;
-            margin: 25px 0 15px 0;
-            font-weight: bold;
-            font-size: 13px;
-            letter-spacing: 1px;
-        }
-
-        /* CONTACT */
-
-        .contact p {
-            font-size: 14px;
-            margin: 7px 0;
-        }
-
-        /* SKILLS */
-
-        .skill {
-            display: flex;
+        .btn-action {
+            display: inline-flex;
             align-items: center;
-            justify-content: space-between;
-            margin: 8px 0;
+            gap: 7px;
+            padding: 10px 22px;
+            border: none;
+            border-radius: 6px;
             font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.18s, transform 0.18s;
+        }
+        .btn-dl   { background: #1a6dcc; color: #fff; }
+        .btn-pr   { background: #374151; color: #fff; }
+        .btn-action:hover { filter: brightness(1.12); transform: translateY(-1px); }
+
+        /* ─── CV PAPER ──────────────────────────────────────────── */
+        .cv {
+            width: 794px;          /* A4 at 96 dpi */
+            max-width: 100%;
+            margin: 12px auto 40px;
+            background: #ffffff;
+            padding: 48px 52px 52px;
+            box-shadow: 0 4px 28px rgba(0,0,0,0.18);
         }
 
-        .dots {
-            display: flex;
-            gap: 4px;
+        /* ─── NAME HEADER ───────────────────────────────────────── */
+        .cv-name {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            color: #0d1b2a;
+            text-transform: uppercase;
+            line-height: 1.1;
         }
 
-        .dot {
-            width: 8px;
-            height: 8px;
-            background: white;
-            border-radius: 50%;
-            opacity: 0.3;
-        }
-
-        .dot.active {
-            opacity: 1;
-        }
-
-        /* LANGUAGES */
-
-        .language {
-            margin: 10px 0;
-            font-size: 14px;
-        }
-
-        .bar {
-            width: 100%;
-            height: 6px;
-            background: #3a556d;
-            border-radius: 10px;
-            margin-top: 4px;
-        }
-
-        .level {
-            height: 6px;
-            background: #00c853;
-            border-radius: 10px;
-        }
-
-        /* RIGHT SIDE */
-
-        .right {
-            width: 65%;
-        }
-
-        .header {
-            background: #173a5e;
-            color: white;
-            padding: 35px;
-        }
-
-        .header h1 {
-            margin: 0;
-            font-size: 34px;
-            letter-spacing: 1px;
-        }
-
-        .header h3 {
-            margin-top: 6px;
-            font-weight: normal;
-            font-size: 16px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .content h3 {
-            background: #021827;
-            color: white;
-            display: inline-block;
-            padding: 6px 15px;
-            border-radius: 20px;
+        .cv-title {
             font-size: 13px;
-            letter-spacing: 1px;
-            margin-top: 20px;
+            font-weight: 500;
+            color: #1a6dcc;
+            letter-spacing: 0.3px;
+            margin-top: 3px;
         }
 
-        .content p {
-            font-size: 14px;
+        /* Contact line(s) under name */
+        .cv-contact-line {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #374151;
+            line-height: 1.8;
+        }
+
+        .cv-contact-line a {
+            color: #1a6dcc;
+            text-decoration: none;
+        }
+        .cv-contact-line a:hover { text-decoration: underline; }
+
+        .cv-contact-line .sep { margin: 0 6px; color: #9ca3af; }
+
+        /* Thin rule below header */
+        .cv-divider {
+            border: none;
+            border-top: 2px solid #0d1b2a;
+            margin: 12px 0 0;
+        }
+
+        /* ─── SECTION HEADING ────────────────────────────────────── */
+        .section {
+            margin-top: 18px;
+        }
+
+        .section-heading {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #0d1b2a;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #0d1b2a;
+            margin-bottom: 9px;
+        }
+
+        /* ─── BODY TEXT ─────────────────────────────────────────── */
+        .section p {
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
+        /* ─── SKILLS ────────────────────────────────────────────── */
+        .skills-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .skills-list li {
+            font-size: 12.5px;
             line-height: 1.7;
-            color: #333;
+            color: #1f2937;
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 2px;
         }
 
-        ul {
-            font-size: 14px;
-            padding-left: 20px;
+        .skills-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #1a6dcc;
+            font-size: 13px;
         }
 
-        li {
-            margin: 6px 0;
+        .skills-list li strong {
+            color: #0d1b2a;
+            font-weight: 600;
         }
 
-        /* PRINT */
-
-        @page {
-            size: auto;
-            margin: 1mm;
+        /* ─── PROJECT ENTRIES ───────────────────────────────────── */
+        .project {
+            margin-bottom: 10px;
         }
 
-        @media print {
-
-            .download-btn {
-                display: none;
-            }
-
-            .print-btn {
-                display: none;
-            }
-
-            .action-buttons {
-                display: none;
-            }
-
-            body {
-                background: white;
-                margin: 0;
-                padding: 0;
-            }
-
-            #cv {
-                width: 100%;
-                margin: 0;
-            }
-
-            .cv-container {
-                box-shadow: none;
-                margin: 0;
-                width: 100%;
-            }
-
-            footer {
-                display: none;
-            }
-
+        .project-header {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
+        .project-name {
+            font-weight: 700;
+            font-size: 12.5px;
+            color: #0d1b2a;
+        }
+
+        .project-meta {
+            font-size: 11.5px;
+            color: #6b7280;
+        }
+
+        .project-meta a {
+            color: #1a6dcc;
+            text-decoration: none;
+        }
+        .project-meta a:hover { text-decoration: underline; }
+
+        .project-desc {
+            font-size: 12.5px;
+            color: #374151;
+            line-height: 1.6;
+            margin-top: 2px;
+            padding-left: 14px;
+            position: relative;
+        }
+
+        .project-desc::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #1a6dcc;
+        }
+
+        /* ─── CERT LIST ─────────────────────────────────────────── */
+        .cert-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .cert-list li {
+            font-size: 12.5px;
+            line-height: 1.65;
+            color: #1f2937;
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 4px;
+        }
+
+        .cert-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #1a6dcc;
+            font-size: 13px;
+        }
+
+        /* ─── EDUCATION ─────────────────────────────────────────── */
+        .edu-entry {
+            margin-bottom: 6px;
+        }
+
+        .edu-school {
+            font-weight: 600;
+            font-size: 12.5px;
+            color: #0d1b2a;
+        }
+
+        .edu-detail {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 1px;
+        }
+
+        /* ─── FOOTER (web only) ─────────────────────────────────── */
         footer {
+            background: #0d1b2a;
             text-align: center;
-            padding: 20px;
-            color: #aaa;
-            background: #08121c;
+            padding: 18px 20px;
+            color: #9ca3af;
+            font-size: 13px;
         }
 
-        .social-links {
-            margin-bottom: 12px;
-        }
+        .social-links { margin-bottom: 10px; }
 
         .social-links a {
             color: #00ff66;
-            font-size: 22px;
-            margin: 0 10px;
+            font-size: 20px;
+            margin: 0 9px;
             text-decoration: none;
+            transition: color 0.2s;
+        }
+        .social-links a:hover { color: #7ee8a2; }
+
+        /* ─── PRINT ─────────────────────────────────────────────── */
+        @page { size: A4; margin: 14mm 14mm 14mm 14mm; }
+
+        @media print {
+            html, body { background: white !important; }
+            .action-bar, footer { display: none !important; }
+            .cv {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            .project, .cert-list li, .edu-entry { page-break-inside: avoid; }
+            .section-heading { page-break-after: avoid; }
+            a { color: #1a6dcc !important; }
+        }
+
+        /* ─── RESPONSIVE ────────────────────────────────────────── */
+        @media (max-width: 860px) {
+            .cv { padding: 36px 28px; }
+            .cv-name { font-size: 22px; }
+        }
+
+        @media (max-width: 560px) {
+            .cv { padding: 26px 18px; }
+            .cv-name { font-size: 18px; }
+            .cv-title { font-size: 12px; }
+            .action-bar { flex-direction: column; align-items: center; }
         }
     </style>
-
 </head>
-
 <body>
 
-    <div class="action-buttons">
-        <button class="download-btn" onclick="downloadCV()">Download as PDF</button>
-        <button class="print-btn" onclick="printCV()">Print</button>
+    <!-- ACTION BUTTONS -->
+    <div class="action-bar">
+        <button class="btn-action btn-dl" onclick="downloadCV()">
+            <i class="fas fa-download"></i> Download PDF
+        </button>
+        <button class="btn-action btn-pr" onclick="window.print()">
+            <i class="fas fa-print"></i> Print / Save
+        </button>
     </div>
 
-    <div id="cv">
+    <!-- CV PAPER -->
+    <div class="cv" id="cv-paper">
 
-        <div class="cv-container">
+        <!-- ══ HEADER ══ -->
+        <div class="cv-name">Francis Mwangi Kienji</div>
+        <div class="cv-title">Software Developer &amp; Digital Skills Expert</div>
 
-            <!-- LEFT SIDE -->
-
-            <div class="left">
-
-                <div class="profile">
-                    <img src="images/2025.png">
-                </div>
-
-                <div class="section-title">CONTACT</div>
-
-                <div class="contact">
-                    <p>Nairobi, Kenya</p>
-                    <p>+254 710217048</p>
-                    <p>frankmk2025@gmail.com</p>
-                    <p>Portfolio: Available on request</p>
-                </div>
-
-                <div class="section-title">SKILLS</div>
-
-                <div class="skill">
-                    <span>Full-Stack Development</span>
-                    <div class="dots">
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                    </div>
-                </div>
-
-                <div class="skill">
-                    <span>Backend & API Development</span>
-                    <div class="dots">
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot"></div>
-                    </div>
-                </div>
-
-                <div class="skill">
-                    <span>IT Support & Systems</span>
-                    <div class="dots">
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot"></div>
-                    </div>
-                </div>
-
-                <div class="skill">
-                    <span>Networking & Security</span>
-                    <div class="dots">
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot"></div>
-                    </div>
-                </div>
-
-                <div class="skill">
-                    <span>Problem Solving</span>
-                    <div class="dots">
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot active"></div>
-                        <div class="dot"></div>
-                    </div>
-                </div>
-
-                <div class="section-title">LANGUAGES</div>
-
-                <div class="language">
-                    English
-                    <div class="bar">
-                        <div class="level" style="width:95%"></div>
-                    </div>
-                </div>
-
-                <div class="language">
-                    Kiswahili
-                    <div class="bar">
-                        <div class="level" style="width:90%"></div>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- RIGHT SIDE -->
-
-            <div class="right">
-
-                <div class="header">
-                    <h1>FRANCIS KIENJI</h1>
-                    <h3>FULL-STACK SOFTWARE ENGINEER | IT EXPERT | NETWORKING SPECIALIST</h3>
-                </div>
-
-                <div class="content">
-
-                    <h3>PROFESSIONAL SUMMARY</h3>
-
-                    <p>
-                        Results-driven Full-Stack Software Engineer with practical experience in web application
-                        development, IT support, and network administration. Skilled in building secure, scalable, and
-                        user-focused digital solutions while maintaining reliable systems and infrastructure. Strong in
-                        troubleshooting, backend integration, and delivering technology solutions that solve real
-                        business challenges.
-                    </p>
-
-                    <h3>EDUCATION</h3>
-
-                    <p><b>Diploma in ICT</b></p>
-                    <p>KIGUMO TECHNICAL VOCATIONAL COLLEGE </p>
-                    <ul>
-                        <li>
-                            <p>Year to Complete: 2027</p>
-                        </li>
-                    </ul>
-                    <p><b>Power Learn Academy Software Development</b></p>
-                    <ul>
-                        <li>
-                            <p>Year of Completion: 2025 December</p>
-                        </li>
-                    </ul>
-
-                    <h3>WORK EXPERIENCE</h3>
-
-                    <p><b>Software & IT Projects – Academic and Personal Portfolio</b></p>
-
-                    <ul>
-                        <li>Built and maintained responsive web applications using modern frontend and backend practices
-                        </li>
-                        <li>Configured and supported local networks, including troubleshooting connectivity and
-                            performance issues</li>
-                        <li>Provided IT support for software, systems setup, and technical issue resolution</li>
-                        <li>Implemented clean documentation and structured workflows to improve project delivery</li>
-                    </ul>
-
-                    <h3>CERTIFICATIONS</h3>
-
-                    <ul>
-                        <li>Diploma in ICT</li>
-                        <li>Power Learn Academy Software Development</li>
-                        <li>KCSE Certificate</li>
-                    </ul>
-
-                    <h3>REFEREES</h3>
-
-                    <p>Available upon request</p>
-
-                </div>
-
-            </div>
-
+        <div class="cv-contact-line">
+            <i class="fas fa-map-marker-alt" style="color:#1a6dcc;margin-right:4px;"></i>Murang'a County, Kenya
+            <span class="sep">|</span>
+            <i class="fas fa-envelope" style="color:#1a6dcc;margin-right:4px;"></i><a href="mailto:frankmk2025@gmail.com">frankmk2025@gmail.com</a>
+            <span class="sep">|</span>
+            <i class="fas fa-phone" style="color:#1a6dcc;margin-right:4px;"></i>0710 217 048
+        </div>
+        <div class="cv-contact-line">
+            <i class="fab fa-github" style="color:#1a6dcc;margin-right:4px;"></i><a href="https://github.com/FranNMK" target="_blank">github.com/FranNMK</a>
+            <span class="sep">|</span>
+            <i class="fas fa-globe" style="color:#1a6dcc;margin-right:4px;"></i><a href="https://franciskienji.vercel.app" target="_blank">franciskienji.vercel.app</a>
+            <span class="sep">|</span>
+            <i class="fas fa-certificate" style="color:#1a6dcc;margin-right:4px;"></i><a href="https://drive.google.com/drive/folders/1x0e_kLqO_UWQX9Z9MZQl6APYX3Ylo8YS" target="_blank">View all certificates</a>
         </div>
 
-    </div>
+        <hr class="cv-divider">
 
+        <!-- ══ PROFESSIONAL SUMMARY ══ -->
+        <div class="section">
+            <div class="section-heading">Professional Summary</div>
+            <p>
+                ICT Diploma student and self-driven software developer based in Murang'a County, Kenya, with
+                hands-on experience designing and deploying full-stack web platforms for education and community
+                impact. Founder of <strong>FK Systems Africa</strong>, a software engineering and digital skills
+                agency. Combines technical build capability with certified training across digital marketing,
+                content writing, AI, and graphic design — equally comfortable coordinating programs and
+                executing the technical work behind them.
+            </p>
+        </div>
+
+        <!-- ══ EDUCATION ══ -->
+        <div class="section">
+            <div class="section-heading">Education</div>
+            <div class="edu-entry">
+                <div class="edu-school">ICT Diploma — Kigumo Technical and Vocational College (KTVC), Murang'a County, Kenya</div>
+                <div class="edu-detail">Expected graduation: 2027</div>
+            </div>
+        </div>
+
+        <!-- ══ SKILLS ══ -->
+        <div class="section">
+            <div class="section-heading">Skills</div>
+            <ul class="skills-list">
+                <li><strong>Languages &amp; Frameworks:</strong> JavaScript, TypeScript, Python, C/C++, HTML/CSS, Node.js/Express, Django, Bootstrap, Tailwind CSS, Cloudinary</li>
+                <li><strong>Databases:</strong> MySQL, TiDB</li>
+                <li><strong>Tools &amp; Platforms:</strong> Git/GitHub, n8n (workflow automation), Canva, Cisco Packet Tracer</li>
+                <li><strong>AI &amp; Data:</strong> Prompt engineering, agentic frameworks, AI ethics &amp; governance, data analytics fundamentals</li>
+                <li><strong>Digital &amp; Communication:</strong> Digital marketing, content writing &amp; virtual assistance, AI-assisted graphic design</li>
+            </ul>
+        </div>
+
+        <!-- ══ PROJECTS & VENTURES ══ -->
+        <div class="section">
+            <div class="section-heading">Projects &amp; Ventures</div>
+
+            <div class="project">
+                <div class="project-header">
+                    <span class="project-name">Kigumo TVC College Website</span>
+                    <span class="project-meta"><a href="https://kigumotvc.ac.ke" target="_blank">kigumotvc.ac.ke</a></span>
+                </div>
+                <p class="project-desc">Designed, built, and deployed the official college website on a Node.js / Express / TiDB / Cloudinary stack; managed hosting migration from Railway to cPanel via Webcom Kenya.</p>
+            </div>
+
+            <div class="project">
+                <div class="project-header">
+                    <span class="project-name">EventHub</span>
+                    <span class="project-meta">1st Place — 2026 KATTI Mount Kenya West Region TVET Fair</span>
+                </div>
+                <p class="project-desc">Built an events management platform (Node.js / TiDB); awarded 1st place in Software Application Development and advanced to the national round.</p>
+            </div>
+
+            <div class="project">
+                <div class="project-header">
+                    <span class="project-name">JengaShule</span>
+                    <span class="project-meta">School SaaS Concept</span>
+                </div>
+                <p class="project-desc">Designed a school management SaaS covering student records, exam grading, and M-Pesa / USSD-based fee collection for underserved primary and junior schools in Kenya.</p>
+            </div>
+
+            <div class="project">
+                <div class="project-header">
+                    <span class="project-name">FK Systems Africa</span>
+                    <span class="project-meta">Founder</span>
+                </div>
+                <p class="project-desc">Founded and operate a software engineering and digital skills agency in Murang'a County, delivering web development and digital skills training services.</p>
+            </div>
+        </div>
+
+        <!-- ══ CERTIFICATIONS & TRAINING ══ -->
+        <div class="section">
+            <div class="section-heading">Certifications &amp; Training</div>
+            <ul class="cert-list">
+                <li>Power Learn Project (PLP) Africa — 16-Week Software Development Program (Python, SQL &amp; Database Design, Startup Building for Developers, Full-Stack Web Development – MERN)</li>
+                <li>Power Learn Project (PLP) Africa — AI Safari: Agentic Frameworks, Automation, Prompt Engineering &amp; AI Ethics/Governance</li>
+                <li>IBM SkillsBuild — IBM Granite Models for Software Development</li>
+                <li>Moringa School — Artificial Intelligence for Software Engineering</li>
+                <li>ICT Authority Kenya (with Salaam, Pathways Technologies &amp; Data Breed Africa) — Foundational AI, AI Training, and Data Analytics Training</li>
+                <li>Cisco Networking Academy — Getting Started with Cisco Packet Tracer</li>
+                <li>Women in Digital Business (ILO/ITC, with Microsoft) — Digital Marketing &amp; Digital Skills Foundations Programme</li>
+                <li>Ajira Digital / Ministry of Labour &amp; Social Protection — AI for Graphic Design; Digital Marketing Training &amp; Mentorship; Content Writing &amp; Virtual Assistance</li>
+            </ul>
+        </div>
+
+        <!-- ══ AFFILIATIONS ══ -->
+        <div class="section">
+            <div class="section-heading">Affiliations</div>
+            <ul class="cert-list">
+                <li>Power Learn Project (PLP) Africa — Alumnus and active community member</li>
+            </ul>
+        </div>
+
+        <!-- ══ REFEREES ══ -->
+        <div class="section">
+            <div class="section-heading">Referees</div>
+            <p>Available upon request.</p>
+        </div>
+
+    </div><!-- end .cv -->
+
+    <!-- FOOTER (web only) -->
     <footer>
         <div class="social-links">
-            <a href="https://wa.me/254710217048" target="_blank" rel="noopener noreferrer"><i
-                    class="fab fa-whatsapp"></i></a>
+            <a href="https://wa.me/254710217048" target="_blank" rel="noopener noreferrer"><i class="fab fa-whatsapp"></i></a>
+            <a href="https://github.com/FranNMK" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i></a>
             <a href="#"><i class="fab fa-linkedin"></i></a>
             <a href="#"><i class="fab fa-twitter"></i></a>
-            <a href="#"><i class="fab fa-github"></i></a>
             <a href="#"><i class="fab fa-instagram"></i></a>
         </div>
-        <p>© 2026 Francis Kienji | Software Engineer & IT Expert</p>
+        <p>© 2026 Francis Kienji | Software Developer &amp; Digital Skills Expert</p>
     </footer>
 
     <script>
-
         async function downloadCV() {
-
-            const element = document.querySelector(".cv-container");
-            const jsPdfCtor = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
-
-            if (!element) {
-                alert("CV content not found.");
+            const el = document.getElementById('cv-paper');
+            const jsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+            if (!el || typeof html2canvas === 'undefined' || !jsPDF) {
+                alert('PDF library not ready — please refresh and try again.');
                 return;
             }
-
-            if (typeof html2canvas === "undefined" || !jsPdfCtor) {
-                alert("PDF library failed to load. Please refresh the page and try again.");
-                return;
-            }
-
+            const btn = document.querySelector('.btn-dl');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
             try {
-                const previousMargin = element.style.margin;
-                const previousBoxShadow = element.style.boxShadow;
-
-                element.style.margin = "0";
-                element.style.boxShadow = "none";
+                const prev = { margin: el.style.margin, shadow: el.style.boxShadow };
+                el.style.margin = '0';
+                el.style.boxShadow = 'none';
                 let canvas;
-
                 try {
-                    canvas = await html2canvas(element, {
-                        scale: 2,
+                    canvas = await html2canvas(el, {
+                        scale: 2.5,
                         useCORS: false,
                         allowTaint: true,
-                        imageTimeout: 0,
-                        backgroundColor: "#ffffff"
+                        backgroundColor: '#ffffff',
+                        imageTimeout: 0
                     });
                 } finally {
-                    element.style.margin = previousMargin;
-                    element.style.boxShadow = previousBoxShadow;
+                    el.style.margin = prev.margin;
+                    el.style.boxShadow = prev.shadow;
                 }
-
-                const pdf = new jsPdfCtor({
-                    orientation: "p",
-                    unit: "mm",
-                    format: "a4"
-                });
-
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
-                const pageMargin = 2;
-                const contentWidth = pageWidth - (pageMargin * 2);
-                const contentHeight = pageHeight - (pageMargin * 2);
-
-                const imageWidth = canvas.width;
-                const imageHeight = canvas.height;
-
-                const scaleRatio = Math.min(contentWidth / imageWidth, contentHeight / imageHeight);
-                const renderWidth = imageWidth * scaleRatio;
-                const renderHeight = imageHeight * scaleRatio;
-
-                const x = (pageWidth - renderWidth) / 2;
-                const y = (pageHeight - renderHeight) / 2;
-
-                const imageData = canvas.toDataURL("image/jpeg", 0.95);
-                pdf.addImage(imageData, "JPEG", x, y, renderWidth, renderHeight);
-                pdf.save("Francis_Kienji_CV.pdf");
-            } catch (error) {
-                console.error("PDF download failed:", error);
-                alert("Download as PDF failed. Please refresh and try again.");
+                const pdf  = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+                const pw   = pdf.internal.pageSize.getWidth();
+                const ph   = pdf.internal.pageSize.getHeight();
+                const m    = 0;
+                const cw   = pw - m * 2;
+                const ch   = ph - m * 2;
+                const ratio = Math.min(cw / canvas.width, ch / canvas.height);
+                const rw   = canvas.width  * ratio;
+                const rh   = canvas.height * ratio;
+                pdf.addImage(canvas.toDataURL('image/jpeg', 0.97), 'JPEG',
+                    (pw - rw) / 2, (ph - rh) / 2, rw, rh);
+                pdf.save('Francis_Mwangi_Kienji_CV.pdf');
+            } catch (err) {
+                console.error(err);
+                alert('Download failed — please try Print / Save instead.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = orig;
             }
-
         }
 
-        function printCV() {
-            window.print();
+        // Auto-trigger via ?download=1 or ?print=1
+        const q = new URLSearchParams(window.location.search);
+        if (q.get('download') === '1') {
+            const wait = n => {
+                if (typeof html2canvas !== 'undefined' && window.jspdf?.jsPDF) downloadCV();
+                else if (n > 0) setTimeout(() => wait(n - 1), 250);
+            };
+            wait(20);
+        } else if (q.get('print') === '1') {
+            setTimeout(() => window.print(), 350);
         }
-
-        function arePdfLibrariesReady() {
-            return typeof html2canvas !== "undefined" && !!(window.jspdf && window.jspdf.jsPDF);
-        }
-
-        function triggerAutoDownload(retries = 20) {
-            if (arePdfLibrariesReady()) {
-                downloadCV();
-                return;
-            }
-
-            if (retries <= 0) {
-                alert("Automatic CV download could not start because PDF libraries are still loading. Refresh and try again.");
-                return;
-            }
-
-            setTimeout(() => triggerAutoDownload(retries - 1), 250);
-        }
-
-        const query = new URLSearchParams(window.location.search);
-        if (query.get("download") === "1") {
-            triggerAutoDownload();
-        } else if (query.get("print") === "1") {
-            setTimeout(printCV, 350);
-        }
-
     </script>
 
 </body>
-
 </html>

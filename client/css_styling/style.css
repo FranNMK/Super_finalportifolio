@@ -191,6 +191,21 @@ background:#08121c;
 color:white;
 }
 
+/* ── NAVBAR scroll glass effect ── */
+header {
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    transition: background 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+header.scrolled {
+    background: rgba(8, 18, 28, 0.92) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+}
+
 /* ================= NAVBAR ================= */
 
 .navbar{
@@ -199,6 +214,7 @@ align-items:center;
 justify-content:space-between;
 padding:20px 60px;
 position:relative;
+background: #0d1117;
 }
 
 /* logo */

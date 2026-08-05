@@ -2,7 +2,9 @@
 // LOGIN PAGE JAVASCRIPT
 // ============================================
 
-const API_BASE_URL = "https://super-finalportifolio.onrender.com";
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : '';
 
 // DOM Elements
 const loginForm = document.getElementById("loginForm");
@@ -112,10 +114,10 @@ loginForm.addEventListener("submit", async (e) => {
         localStorage.setItem("user", JSON.stringify(data.user));
         
         showSuccess("✅ Login successful! Redirecting...");
-        
+
         // Redirect to admin panel after 1.5 seconds
         setTimeout(() => {
-            window.location.href = "/admin";
+            window.location.href = "/Management/manage.html";
         }, 1500);
         
     } catch (error) {
@@ -128,21 +130,43 @@ loginForm.addEventListener("submit", async (e) => {
 // FORGOT PASSWORD HANDLER
 // ============================================
 
-forgotPasswordLink.addEventListener("click", (e) => {
+forgotPasswordLink.addEventListener("click", async (e) => {
     e.preventDefault();
-    
-    const email = prompt("Enter your email address to reset password:");
-    
+
+    const email = prompt("Enter your admin email address to get a reset link:");
     if (!email) return;
-    
+
     if (!email.includes("@")) {
         showError("Please enter a valid email address.");
         return;
     }
-    
-    // TODO: Implement password reset endpoint
-    showSuccess("✅ Password reset link sent to " + email);
-    console.log("Password reset requested for:", email);
+
+    showLoading();
+
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+
+        const data = await res.json();
+        hideLoading();
+
+        if (data.resetUrl) {
+            // Show the link in a copyable prompt — no email service needed
+            const copied = prompt(
+                "✅ Reset link generated!\n\nCopy this URL and open it in your browser:\n\n" + data.resetUrl + "\n\n(Click OK to dismiss)",
+                data.resetUrl
+            );
+            showSuccess("Reset link is ready. Copy it from the prompt above.");
+        } else {
+            showSuccess(data.message || "If that email exists, a reset link was generated.");
+        }
+    } catch (err) {
+        hideLoading();
+        showError("Network error. Please check your connection.");
+    }
 });
 
 // ============================================
@@ -162,9 +186,7 @@ async function checkIfLoggedIn() {
             });
             
             if (response.ok) {
-                // ONLY redirect if the token is valid AND we aren't already on the manage page
-                // We use the full Render URL here to avoid the Vercel redirect loop
-                window.location.href = "https://super-finalportifolio.onrender.com/Management/manage.html";
+                window.location.href = "/Management/manage.html";
             } else {
                 // Token is invalid, clear it
                 localStorage.removeItem("authToken" );

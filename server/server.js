@@ -1,8 +1,12 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const path = require("path");
+const fs = require("fs");
 require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+
 const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
 
 const hasCloudinaryConfig =
   !!process.env.CLOUDINARY_CLOUD_NAME &&
@@ -17,53 +21,42 @@ if (hasCloudinaryConfig) {
   });
 } else {
   console.warn(
-    "[Senior Warning] Cloudinary env vars are missing. Screenshot uploads will use local storage.",
+    "[Warning] Cloudinary env vars missing. Image uploads will not work.",
   );
 }
 
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
-const fs = require("fs");
-const puppeteer = require('puppeteer');
 
-const resolvedDbHost = process.env.TIDB_HOST || process.env.DB_HOST;
-const resolvedDbUser =
-  process.env.TIDB_USER || process.env.DB_USER || process.env.DB_USERNAME;
-const resolvedDbPassword = process.env.TIDB_PASSWORD || process.env.DB_PASSWORD;
-const resolvedDbName =
-  process.env.TIDB_DB_NAME || process.env.DB_NAME || process.env.DB_DATABASE;
-const resolvedDbPort = Number(
-  process.env.TIDB_PORT || process.env.DB_PORT || 4000,
-);
-const useSsl = process.env.DB_SSL === "true" || !!process.env.TIDB_HOST;
+// ── Multer: store uploads in memory so we can stream to Cloudinary ──────────
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed."));
+    }
+  },
+});
 
-console.log("[Senior Debug] Checking Environment Variables...");
-console.log("DB host exists:", !!resolvedDbHost);
-console.log("DB user exists:", !!resolvedDbUser);
-
-if (!resolvedDbHost || !resolvedDbUser || !resolvedDbName) {
-  console.error(
-    "[Senior Error] Missing required DB env values. Please check host, user, and database in .env.",
-  );
-}
-
+// ── DB config ────────────────────────────────────────────────────────────────
 const app = express();
 const ROOT_DIR = path.resolve(__dirname, "..");
 const CLIENT_DIR = path.join(ROOT_DIR, "client");
 const MANAGEMENT_DIR = path.join(__dirname, "Management");
 const SERVER_IMAGES_DIR = path.join(__dirname, "images");
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// server.js - Professional Connection Logic
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || "test", // TiDB default is often 'test'
+  database: process.env.DB_NAME || "test",
   port: process.env.DB_PORT || 4000,
   waitForConnections: true,
   connectionLimit: 10,
@@ -74,61 +67,58 @@ const db = mysql.createPool({
   },
 });
 
-// Test the connection immediately
 db.getConnection((err, connection) => {
   if (err) {
-    console.error("[Senior Error] ❌ Connection Failed:", err.message);
+    console.error("[Error] ❌ DB Connection Failed:", err.message);
   } else {
-    console.log(
-      `[Senior Log] ✅ Connected to TiDB Cloud (ID: ${connection.threadId})`,
-    );
+    console.log(`[Log] ✅ Connected to TiDB Cloud (ID: ${connection.threadId})`);
     connection.release();
   }
 });
 
 // ============================================
+// MIDDLEWARE: Verify JWT Token
+// ============================================
+
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "No token provided." });
+  }
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token." });
+  }
+}
+
+// ============================================
 // AUTHENTICATION ROUTES
 // ============================================
 
-// REGISTER: Create the first admin user (or additional users)
+// REGISTER
 app.post("/api/auth/register", async (req, res) => {
   const { email, password } = req.body;
-
-  // Validation
-  if (!email || !password) {
+  if (!email || !password)
     return res.status(400).json({ error: "Email and password are required." });
-  }
-
-  if (password.length < 8) {
+  if (password.length < 8)
     return res.status(400).json({ error: "Password must be at least 8 characters." });
-  }
 
   try {
-    // Check if user already exists
-    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: "Database error." });
-      }
+    db.query("SELECT id FROM users WHERE email = ?", [email], async (err, rows) => {
+      if (err) return res.status(500).json({ error: "Database error." });
+      if (rows.length > 0) return res.status(409).json({ error: "Email already registered." });
 
-      if (results.length > 0) {
-        return res.status(409).json({ error: "Email already registered." });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Insert user into database
+      const hash = await bcrypt.hash(password, 10);
       db.query(
         "INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)",
-        [email, hashedPassword, "admin"],
+        [email, hash, "admin"],
         (insertErr) => {
-          if (insertErr) {
-            return res.status(500).json({ error: "Failed to register user." });
-          }
-
-          console.log(`[Auth] ✅ New admin user registered: ${email}`);
+          if (insertErr) return res.status(500).json({ error: "Failed to register user." });
+          console.log(`[Auth] ✅ New admin registered: ${email}`);
           res.status(201).json({ message: "User registered successfully! You can now login." });
-        }
+        },
       );
     });
   } catch (error) {
@@ -137,47 +127,33 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-// LOGIN: Authenticate user and return JWT token
+// LOGIN
 app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
-
-  // Validation
-  if (!email || !password) {
+  if (!email || !password)
     return res.status(400).json({ error: "Email and password are required." });
-  }
 
   try {
-    // Find user by email
-    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: "Database error." });
-      }
-
-      if (results.length === 0) {
+    db.query("SELECT * FROM users WHERE email = ?", [email], async (err, rows) => {
+      if (err) return res.status(500).json({ error: "Database error." });
+      if (rows.length === 0)
         return res.status(401).json({ error: "Invalid email or password." });
-      }
 
-      const user = results[0];
+      const user = rows[0];
+      const valid = await bcrypt.compare(password, user.password_hash);
+      if (!valid) return res.status(401).json({ error: "Invalid email or password." });
 
-      // Compare password with hash
-      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-
-      if (!isPasswordValid) {
-        return res.status(401).json({ error: "Invalid email or password." });
-      }
-
-      // Generate JWT token
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: "7d" } // Token expires in 7 days
+        { expiresIn: "7d" },
       );
 
       console.log(`[Auth] ✅ User logged in: ${email}`);
-      res.json({ 
-        message: "Login successful!", 
-        token: token,
-        user: { id: user.id, email: user.email, role: user.role }
+      res.json({
+        message: "Login successful!",
+        token,
+        user: { id: user.id, email: user.email, role: user.role },
       });
     });
   } catch (error) {
@@ -186,266 +162,284 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
-// VERIFY TOKEN: Check if a token is valid
+// VERIFY TOKEN
 app.post("/api/auth/verify", (req, res) => {
   const { token } = req.body;
-
-  if (!token) {
-    return res.status(400).json({ error: "Token is required." });
-  }
-
+  if (!token) return res.status(400).json({ error: "Token is required." });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     res.json({ valid: true, user: decoded });
-  } catch (error) {
+  } catch {
     res.status(401).json({ valid: false, error: "Invalid or expired token." });
   }
 });
 
-// LOGOUT: Clear token on client side (optional backend endpoint)
+// LOGOUT
 app.post("/api/auth/logout", (req, res) => {
-  console.log("[Auth] ✅ User logged out");
   res.json({ message: "Logged out successfully." });
 });
 
-// REQUEST ACCESS: Submit a request for admin access
+// REQUEST ACCESS
 app.post("/api/auth/request-access", (req, res) => {
   const { name, email, reason } = req.body;
-
-  if (!name || !email || !reason) {
+  if (!name || !email || !reason)
     return res.status(400).json({ error: "Name, email, and reason are required." });
-  }
 
   db.query(
     "INSERT INTO access_requests (name, email, reason) VALUES (?, ?, ?)",
     [name, email, reason],
     (err) => {
       if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
+        if (err.code === "ER_DUP_ENTRY")
           return res.status(409).json({ error: "This email has already requested access." });
-        }
         return res.status(500).json({ error: "Failed to submit request." });
       }
-
-      console.log(`[Auth] 📧 Access request from: ${email}`);
       res.status(201).json({ message: "Access request submitted successfully!" });
-    }
+    },
   );
 });
 
-// GET ACCESS REQUESTS: Admin endpoint to view pending requests
 app.get("/api/auth/access-requests", (req, res) => {
-  // TODO: Add middleware to verify admin token
   db.query(
     "SELECT * FROM access_requests WHERE status = 'pending' ORDER BY created_at DESC",
     (err, results) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to fetch requests." });
+      if (err) return res.status(500).json({ error: "Failed to fetch requests." });
+      res.json(results);
+    },
+  );
+});
+
+app.post("/api/auth/access-requests/:id/approve", (req, res) => {
+  db.query(
+    "UPDATE access_requests SET status = 'approved' WHERE id = ?",
+    [req.params.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Failed to approve request." });
+      res.json({ message: "Access request approved!" });
+    },
+  );
+});
+
+app.post("/api/auth/access-requests/:id/deny", (req, res) => {
+  db.query(
+    "UPDATE access_requests SET status = 'denied' WHERE id = ?",
+    [req.params.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Failed to deny request." });
+      res.json({ message: "Access request denied." });
+    },
+  );
+});
+
+// ============================================
+// PASSWORD RESET (professional, no .env editing)
+// ============================================
+
+/**
+ * Step 1 – Admin clicks "Reset Password" on the login page.
+ *   POST /api/auth/reset-password  { email }
+ *   Returns a resetUrl the admin can open directly.
+ *   (No email service needed — only you use this.)
+ */
+app.post("/api/auth/reset-password", (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Email is required." });
+
+  db.query("SELECT id FROM users WHERE email = ?", [email], (err, rows) => {
+    if (err) return res.status(500).json({ error: "Database error." });
+
+    // Always return success to avoid user enumeration
+    if (rows.length === 0) {
+      return res.json({ message: "If that email exists, a reset link has been generated." });
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const expiresStr = expires.toISOString().slice(0, 19).replace("T", " ");
+
+    db.query(
+      "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?",
+      [tokenHash, expiresStr, email],
+      (updateErr) => {
+        if (updateErr) return res.status(500).json({ error: "Failed to generate reset token." });
+
+        const baseUrl = req.headers.origin || `${req.protocol}://${req.get("host")}`;
+        const resetUrl = `${baseUrl}/Management/reset-password.html?token=${rawToken}`;
+
+        console.log(`[Auth] 🔑 Password reset link for ${email}: ${resetUrl}`);
+
+        res.json({
+          message: "Reset link generated. Copy the URL below and open it in your browser.",
+          resetUrl,
+        });
+      },
+    );
+  });
+});
+
+/**
+ * Step 2 – Admin submits the new password on reset-password.html.
+ *   POST /api/auth/reset-password/confirm  { token, newPassword }
+ */
+app.post("/api/auth/reset-password/confirm", async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword)
+    return res.status(400).json({ error: "Token and new password are required." });
+  if (newPassword.length < 8)
+    return res.status(400).json({ error: "Password must be at least 8 characters." });
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  db.query(
+    "SELECT id, reset_token_expires FROM users WHERE reset_token = ?",
+    [tokenHash],
+    async (err, rows) => {
+      if (err) return res.status(500).json({ error: "Database error." });
+      if (rows.length === 0)
+        return res.status(400).json({ error: "Invalid or already-used reset token." });
+
+      const user = rows[0];
+      if (new Date() > new Date(user.reset_token_expires))
+        return res.status(400).json({ error: "Reset token has expired. Please request a new one." });
+
+      try {
+        const hash = await bcrypt.hash(newPassword, 10);
+        db.query(
+          "UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
+          [hash, user.id],
+          (updateErr) => {
+            if (updateErr) return res.status(500).json({ error: "Failed to update password." });
+            console.log(`[Auth] ✅ Password reset for user ID: ${user.id}`);
+            res.json({ message: "Password updated successfully!" });
+          },
+        );
+      } catch (hashErr) {
+        res.status(500).json({ error: "Failed to hash password." });
       }
+    },
+  );
+});
+
+// ============================================
+// PUBLIC API ROUTES
+// ============================================
+
+// ============================================
+// PUBLIC SKILLS API
+// ============================================
+
+app.get("/api/skills", (req, res) => {
+  db.query(
+    "SELECT id, title, description, icon, sort_order FROM skills WHERE is_active = 1 ORDER BY sort_order ASC, id ASC",
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch skills" });
       res.json(results);
     }
   );
 });
 
-// APPROVE ACCESS REQUEST: Admin endpoint
-app.post("/api/auth/access-requests/:id/approve", (req, res) => {
-  // TODO: Add middleware to verify admin token
-  const { id } = req.params;
-
-  db.query(
-    "UPDATE access_requests SET status = 'approved' WHERE id = ?",
-    [id],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to approve request." });
-      }
-      res.json({ message: "Access request approved!" });
-    }
-  );
-});
-
-// DENY ACCESS REQUEST: Admin endpoint
-app.post("/api/auth/access-requests/:id/deny", (req, res) => {
-  // TODO: Add middleware to verify admin token
-  const { id } = req.params;
-
-  db.query(
-    "UPDATE access_requests SET status = 'denied' WHERE id = ?",
-    [id],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: "Failed to deny request." });
-      }
-      res.json({ message: "Access request denied." });
-    }
-  );
-});
-
 // ============================================
-// MIDDLEWARE: Verify JWT Token
+// CONTACT FORM — sends email via nodemailer
 // ============================================
 
-function verifyToken(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1]; // Extract token from "Bearer <token>"
+app.post("/api/contact", async (req, res) => {
+  const { name, email, subject, message } = req.body;
+  if (!name || !email || !message)
+    return res.status(400).json({ error: "Name, email, and message are required." });
 
-  if (!token) {
-    return res.status(401).json({ error: "No token provided." });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: "Invalid or expired token." });
-  }
-}
-
-// Export middleware for use in other files
-module.exports = { verifyToken };
-
-// Screenshoot function
-async function captureProjectScreenshot(url, projectId) {
-  const startTime = Date.now();
-  console.log(`[Screenshot] 🚀 Starting capture for: ${url}`);
-
-  let browser;
-  let tempPath;
-
-  try {
-    const isRenderHosted = url.includes(".onrender.com");
-
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-    });
-
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 });
-
-    console.log(`[Screenshot] 📍 URL Type: ${isRenderHosted ? "Render-hosted" : "External"}`);
-
-    const navigationTimeout = isRenderHosted ? 90000 : 60000;
+  // If nodemailer is configured, send the email
+  const hasEmailConfig = !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
+  if (hasEmailConfig) {
     try {
-      await page.goto(url, { 
-        waitUntil: "networkidle2", 
-        timeout: navigationTimeout 
+      const nodemailer = require("nodemailer");
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
       });
-    } catch (navError) {
-      console.error(`[Screenshot] ❌ Navigation failed: ${navError.message}`);
-      return null;
-    }
-
-    console.log("[Screenshot] ⏳ Waiting for content to render...");
-    
-    const maxWaitTime = isRenderHosted ? 60000 : 30000; // Increased to 60s for Render
-    const startWait = Date.now();
-    let contentReady = false;
-    let previousHtmlSize = 0;
-    let stableCount = 0;
-
-    while (Date.now() - startWait < maxWaitTime && !contentReady) {
-      try {
-        const pageContent = await page.evaluate(() => {
-          const body = document.body;
-          const html = body.innerHTML;
-          const text = body.innerText.trim();
-          const allElements = body.querySelectorAll("*");
-          
-          const visibleElements = Array.from(allElements).filter(el => {
-            const style = window.getComputedStyle(el);
-            const rect = el.getBoundingClientRect();
-            return (style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0);
-          }).length;
-
-          return {
-            htmlSize: html.length,
-            textLength: text.length,
-            elementCount: allElements.length,
-            visibleElements: visibleElements,
-            hasMainContent: !!(document.querySelector("main") || document.querySelector("header") || document.querySelector("nav")),
-          };
-        });
-
-        console.log(`[Screenshot] 📊 Content Status:`, {
-          htmlSize: pageContent.htmlSize,
-          textLength: pageContent.textLength,
-          visible: pageContent.visibleElements
-        });
-
-        if (Math.abs(pageContent.htmlSize - previousHtmlSize) < 100 && pageContent.htmlSize > 500) {
-          stableCount++;
-        } else {
-          stableCount = 0;
-        }
-        previousHtmlSize = pageContent.htmlSize;
-
-        // Success condition
-        if (pageContent.htmlSize > 1000 && pageContent.visibleElements > 5 && stableCount >= 2) {
-          contentReady = true;
-          console.log("[Screenshot] ✅ Content ready and stable!");
-          break;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3s between checks
-        await page.evaluate(() => window.scrollBy(0, 200)); // Subtle scroll to wake up JS
-      } catch (checkError) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-
-    if (!contentReady) {
-      console.log("[Screenshot] ⚠️ Content did not load or stabilize within timeout.");
-      return null;
-    }
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    tempPath = path.join(__dirname, `temp_${projectId}_${Date.now()}.png`);
-    await page.screenshot({ path: tempPath, fullPage: true });
-
-    const totalTime = Math.floor((Date.now() - startTime) / 1000);
-    console.log(`[Screenshot] 📸 Captured in ${totalTime}s`);
-
-    if (hasCloudinaryConfig) {
-      const uploadResult = await cloudinary.uploader.upload(tempPath, {
-        folder: "portfolio_projects",
-        public_id: `project_${projectId}`,
-        overwrite: true,
-        invalidate: true,
+      await transporter.sendMail({
+        from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
+        to: process.env.EMAIL_USER,
+        replyTo: email,
+        subject: subject ? `[Portfolio] ${subject}` : "[Portfolio] New Contact Message",
+        text: `From: ${name} <${email}>\n\n${message}`,
+        html: `<p><strong>From:</strong> ${name} &lt;${email}&gt;</p><p><strong>Subject:</strong> ${subject || "(none)"}</p><hr/><p>${message.replace(/\n/g, "<br>")}</p>`,
       });
-      fs.unlinkSync(tempPath);
-      console.log(`[Screenshot] ✅ Cloud URL: ${uploadResult.secure_url}`);
-      return { path: uploadResult.secure_url, time: totalTime };
+    } catch (err) {
+      console.error("[Contact] ❌ Email send failed:", err.message);
+      return res.status(500).json({ error: "Failed to send email. Please try WhatsApp or direct email." });
     }
-
-    return { path: `temp_${projectId}.png`, time: totalTime };
-
-  } catch (error) {
-    console.error(`[Screenshot] ❌ Failed: ${error.message}`);
-    if (tempPath && fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-    return null;
-  } finally {
-    if (browser) await browser.close();
+  } else {
+    // Log to server console when email not configured (still returns success)
+    console.log(`[Contact] 📩 New message from ${name} <${email}> — "${subject || "(no subject)"}"`);
   }
-}
+  res.json({ message: "Message received! I will get back to you soon." });
+});
 
+// ============================================
+// ADMIN SKILLS ROUTES (protected)
+// ============================================
 
-// --- PUBLIC API ROUTES ---
+app.get("/api/admin/skills", verifyToken, (req, res) => {
+  db.query(
+    "SELECT * FROM skills ORDER BY sort_order ASC, id ASC",
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch skills." });
+      res.json(results);
+    }
+  );
+});
+
+app.post("/api/admin/skills", verifyToken, (req, res) => {
+  const { title, description, icon, sort_order } = req.body;
+  if (!title) return res.status(400).json({ error: "Title is required." });
+  db.query(
+    "INSERT INTO skills (title, description, icon, sort_order, is_active) VALUES (?, ?, ?, ?, 1)",
+    [title, description || null, icon || "fa-solid fa-star", Number(sort_order) || 0],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: "Failed to add skill." });
+      res.status(201).json({ message: "Skill added successfully!", id: result.insertId });
+    }
+  );
+});
+
+app.put("/api/admin/skills/:id", verifyToken, (req, res) => {
+  const id = Number(req.params.id);
+  const { title, description, icon, sort_order, is_active } = req.body;
+  if (!title) return res.status(400).json({ error: "Title is required." });
+  db.query(
+    "UPDATE skills SET title = ?, description = ?, icon = ?, sort_order = ?, is_active = ? WHERE id = ?",
+    [title, description || null, icon || "fa-solid fa-star", Number(sort_order) || 0, is_active ? 1 : 0, id],
+    (err, result) => {
+      if (err) return res.status(500).json({ error: "Failed to update skill." });
+      if (!result || result.affectedRows === 0) return res.status(404).json({ error: "Skill not found." });
+      res.json({ message: "Skill updated successfully!" });
+    }
+  );
+});
+
+app.delete("/api/admin/skills/:id", verifyToken, (req, res) => {
+  const id = Number(req.params.id);
+  db.query("DELETE FROM skills WHERE id = ?", [id], (err, result) => {
+    if (err) return res.status(500).json({ error: "Failed to delete skill." });
+    if (!result || result.affectedRows === 0) return res.status(404).json({ error: "Skill not found." });
+    res.json({ message: "Skill deleted." });
+  });
+});
+
+// ============================================
+// PUBLIC PROJECTS API
+// ============================================
 
 app.get("/api/projects", (req, res) => {
   const year = req.query.year;
-  // Senior Move: Filter by is_deleted = 0 so visitors don't see trashed projects
   let sql = "SELECT * FROM projects WHERE is_deleted = 0";
   const params = [];
-
   if (year && year !== "all") {
     sql += " AND year = ?";
     params.push(year);
   }
   sql += " ORDER BY year DESC, created_at DESC";
-
   db.query(sql, params, (err, results) => {
     if (err) return res.status(500).json({ error: "Failed to fetch projects" });
     res.json(results);
@@ -453,150 +447,147 @@ app.get("/api/projects", (req, res) => {
 });
 
 app.get("/api/projects/years", (req, res) => {
-  const sql =
-    "SELECT DISTINCT year FROM projects WHERE is_deleted = 0 AND year IS NOT NULL ORDER BY year DESC";
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Failed to fetch years" });
-    res.json(results.map((row) => row.year));
-  });
-});
-
-// --- ADMIN API ROUTES ---
-
-app.post("/api/admin/projects", (req, res) => {
-  const { name, description, live_url, github_url, year } = req.body;
-
-  // 1. Basic Validation (Senior Best Practice)
-  if (!name || !year) {
-    return res.status(400).json({ error: "Name and Year are required." });
-  }
-
-  // 2. The SQL Command (Matched to your TiDB DESC output)
-  const sql =
-    "INSERT INTO projects (name, description, live_url, github_url, year) VALUES (?, ?, ?, ?, ?)";
-
   db.query(
-    sql,
-    [name, description, live_url, github_url, year],
-    async (err, result) => {
-      if (err) {
-        // --- SENIOR DEBUG: THIS LOG IS THE KEY ---
-        console.error("[Senior Error] ❌ Database Insert Failed!");
-        console.error("SQL Error Message:", err.message);
-        return res
-          .status(500)
-          .json({ error: "Database error: " + err.message });
-      }
-
-      const projectId = result.insertId;
-      console.log(`[Senior Log] ✅ Project saved with ID: ${projectId}`);
-
-      // Trigger Screenshot Automation in the background
-      if (live_url) {
-        try {
-          console.log(`[Senior Log] 📸 Triggering screenshot for: ${live_url}`);
-          const screenshotResult = await captureProjectScreenshot(
-            live_url,
-            projectId,
-          );
-          if (screenshotResult && screenshotResult.path) {
-            db.query(
-              "UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?",
-              [screenshotResult.path, screenshotResult.time, projectId],
-            );
-          }
-        } catch (screenshotError) {
-          console.error(
-            "[Senior Error] Screenshot failed:",
-            screenshotError.message,
-          );
-        }
-      }
-
-      res
-        .status(201)
-        .json({ message: "Project added successfully!", id: projectId });
+    "SELECT DISTINCT year FROM projects WHERE is_deleted = 0 AND year IS NOT NULL ORDER BY year DESC",
+    (err, results) => {
+      if (err) return res.status(500).json({ error: "Failed to fetch years" });
+      res.json(results.map((row) => row.year));
     },
   );
 });
 
-app.put("/api/admin/projects/:id", (req, res) => {
+// ============================================
+// ADMIN API ROUTES (all protected with verifyToken)
+// ============================================
+
+// GET single project (for edit modal — avoids fetching all)
+app.get("/api/admin/projects/:id", verifyToken, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0)
+    return res.status(400).json({ error: "Invalid project ID." });
+
+  db.query("SELECT * FROM projects WHERE id = ?", [id], (err, rows) => {
+    if (err) return res.status(500).json({ error: "Database error." });
+    if (rows.length === 0) return res.status(404).json({ error: "Project not found." });
+    res.json(rows[0]);
+  });
+});
+
+// ADD PROJECT
+app.post("/api/admin/projects", verifyToken, (req, res) => {
+  const { name, description, live_url, github_url, year } = req.body;
+  if (!name || !year)
+    return res.status(400).json({ error: "Name and Year are required." });
+
+  const sql =
+    "INSERT INTO projects (name, description, live_url, github_url, year) VALUES (?, ?, ?, ?, ?)";
+
+  db.query(sql, [name, description, live_url, github_url, year], (err, result) => {
+    if (err) {
+      console.error("[Error] ❌ DB Insert failed:", err.message);
+      return res.status(500).json({ error: "Database error: " + err.message });
+    }
+    const projectId = result.insertId;
+    console.log(`[Log] ✅ Project saved with ID: ${projectId}`);
+    res.status(201).json({ message: "Project added successfully!", id: projectId });
+  });
+});
+
+// UPDATE PROJECT
+app.put("/api/admin/projects/:id", verifyToken, (req, res) => {
   const projectId = Number(req.params.id);
   const { name, description, live_url, github_url, year } = req.body;
 
-  if (!Number.isInteger(projectId) || projectId <= 0) {
+  if (!Number.isInteger(projectId) || projectId <= 0)
     return res.status(400).json({ error: "Invalid project ID." });
-  }
-
-  if (!name || year === undefined || year === null) {
+  if (!name || year === undefined || year === null)
     return res.status(400).json({ error: "Name and Year are required." });
-  }
 
   const parsedYear = Number(year);
-  if (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
-    return res
-      .status(400)
-      .json({ error: "Year must be a valid number between 1900 and 2100." });
-  }
+  if (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100)
+    return res.status(400).json({ error: "Year must be between 1900 and 2100." });
 
   const sql =
     "UPDATE projects SET name = ?, description = ?, live_url = ?, github_url = ?, year = ? WHERE id = ?";
 
   db.query(
     sql,
-    [
-      name,
-      description || null,
-      live_url || null,
-      github_url || null,
-      parsedYear,
-      projectId,
-    ],
-    async (err, result) => {
+    [name, description || null, live_url || null, github_url || null, parsedYear, projectId],
+    (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!result || result.affectedRows === 0) {
+      if (!result || result.affectedRows === 0)
         return res.status(404).json({ error: "Project not found." });
-      }
-
-      if (live_url) {
-        try {
-          const screenshotResult = await captureProjectScreenshot(
-            live_url,
-            projectId,
-          );
-          if (screenshotResult && screenshotResult.path) {
-            db.query(
-              "UPDATE projects SET image_path = ?, load_time_seconds = ? WHERE id = ?",
-              [screenshotResult.path, screenshotResult.time, projectId],
-            );
-          }
-        } catch (screenshotError) {
-          console.error(
-            "[Senior Error] Screenshot refresh failed:",
-            screenshotError.message,
-          );
-        }
-      }
-
       res.json({ message: "Project updated successfully!" });
     },
   );
 });
 
-// 1. SOFT DELETE: Move to Recycle Bin
-app.delete("/api/admin/projects/:id", (req, res) => {
-  const { id } = req.params;
-  const sql =
-    "UPDATE projects SET is_deleted = 1, deleted_at = NOW() WHERE id = ?";
+// UPLOAD / REPLACE PROJECT IMAGE
+app.post(
+  "/api/admin/projects/:id/upload-image",
+  verifyToken,
+  upload.single("image"),
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0)
+      return res.status(400).json({ error: "Invalid project ID." });
+    if (!req.file)
+      return res.status(400).json({ error: "No image file provided." });
 
-  db.query(sql, [id], (err, result) => {
-    if (err) return res.status(500).json({ error: "Failed to move to trash" });
-    res.json({ message: "Project moved to Recycle Bin!" });
-  });
+    if (!hasCloudinaryConfig) {
+      return res.status(503).json({ error: "Cloudinary is not configured on this server." });
+    }
+
+    try {
+      // Upload buffer to Cloudinary
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "portfolio_projects",
+            public_id: `project_${id}`,
+            overwrite: true,
+            invalidate: true,
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          },
+        );
+        stream.end(req.file.buffer);
+      });
+
+      const imageUrl = uploadResult.secure_url;
+
+      db.query(
+        "UPDATE projects SET image_path = ? WHERE id = ?",
+        [imageUrl, id],
+        (dbErr) => {
+          if (dbErr) return res.status(500).json({ error: "Image uploaded but DB update failed." });
+          console.log(`[Log] ✅ Image uploaded for project ${id}: ${imageUrl}`);
+          res.json({ message: "Image uploaded successfully!", image_path: imageUrl });
+        },
+      );
+    } catch (err) {
+      console.error("[Error] ❌ Cloudinary upload failed:", err.message);
+      res.status(500).json({ error: "Image upload failed: " + err.message });
+    }
+  },
+);
+
+// SOFT DELETE — move to recycle bin
+app.delete("/api/admin/projects/:id", verifyToken, (req, res) => {
+  db.query(
+    "UPDATE projects SET is_deleted = 1, deleted_at = NOW() WHERE id = ?",
+    [req.params.id],
+    (err) => {
+      if (err) return res.status(500).json({ error: "Failed to move to trash" });
+      res.json({ message: "Project moved to Recycle Bin!" });
+    },
+  );
 });
 
-// 2. GET RECYCLE BIN CONTENT
-app.get("/api/admin/recycle-bin", (req, res) => {
+// GET RECYCLE BIN
+app.get("/api/admin/recycle-bin", verifyToken, (req, res) => {
   db.query(
     "SELECT * FROM projects WHERE is_deleted = 1 ORDER BY deleted_at DESC",
     (err, results) => {
@@ -606,12 +597,11 @@ app.get("/api/admin/recycle-bin", (req, res) => {
   );
 });
 
-// 3. RESTORE PROJECT
-app.post("/api/admin/projects/:id/restore", (req, res) => {
-  const { id } = req.params;
+// RESTORE PROJECT
+app.post("/api/admin/projects/:id/restore", verifyToken, (req, res) => {
   db.query(
     "UPDATE projects SET is_deleted = 0, deleted_at = NULL WHERE id = ?",
-    [id],
+    [req.params.id],
     (err) => {
       if (err) return res.status(500).json({ error: "Restore failed" });
       res.json({ message: "Project restored successfully!" });
@@ -619,46 +609,33 @@ app.post("/api/admin/projects/:id/restore", (req, res) => {
   );
 });
 
-// 4. PERMANENT DELETE (Deletes record and physical file)
-app.delete("/api/admin/projects/:id/permanent", (req, res) => {
+// PERMANENT DELETE
+app.delete("/api/admin/projects/:id/permanent", verifyToken, (req, res) => {
   const { id } = req.params;
 
-  db.query(
-    "SELECT image_path FROM projects WHERE id = ?",
-    [id],
-    (err, results) => {
-      if (err || results.length === 0)
-        return res.status(500).json({ error: "Project not found" });
+  db.query("SELECT image_path FROM projects WHERE id = ?", [id], (err, rows) => {
+    if (err || rows.length === 0)
+      return res.status(500).json({ error: "Project not found" });
 
-      const imagePath = results[0].image_path;
+    const imagePath = rows[0].image_path;
 
-      db.query("DELETE FROM projects WHERE id = ?", [id], (deleteErr) => {
-        if (deleteErr) return res.status(500).json({ error: "Delete failed" });
+    db.query("DELETE FROM projects WHERE id = ?", [id], (delErr) => {
+      if (delErr) return res.status(500).json({ error: "Delete failed" });
 
-        if (imagePath) {
-          const isRemoteImage = /^https?:\/\//i.test(imagePath);
-          if (!isRemoteImage) {
-            const fullPath = path.join(__dirname, imagePath);
-            fs.unlink(fullPath, (fsErr) => {
-              if (fsErr)
-                console.error(
-                  `[Senior Warning] Could not delete file: ${fullPath}`,
-                );
-              else
-                console.log(
-                  `[Senior Log] 🗑️ Deleted unused image: ${imagePath}`,
-                );
-            });
-          }
-        }
+      // If it's a local file (not a Cloudinary URL), remove it from disk
+      if (imagePath && !/^https?:\/\//i.test(imagePath)) {
+        const fullPath = path.join(__dirname, imagePath);
+        fs.unlink(fullPath, (fsErr) => {
+          if (fsErr) console.warn(`[Warning] Could not delete file: ${fullPath}`);
+        });
+      }
 
-        res.json({ message: "Project permanently deleted from system." });
-      });
-    },
-  );
+      res.json({ message: "Project permanently deleted from system." });
+    });
+  });
 });
 
-// --- STATIC FILE SERVING ---
+// ── STATIC FILE SERVING ──────────────────────────────────────────────────────
 app.use(express.static(CLIENT_DIR));
 app.use("/Management", express.static(MANAGEMENT_DIR));
 app.use(
@@ -671,5 +648,10 @@ app.get("/{*any}", (req, res) => {
   res.sendFile(path.join(CLIENT_DIR, "index.html"));
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Export for Vercel serverless — also listen locally for `npm start`
+module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`[Log] Server running on port ${PORT}`));
+}

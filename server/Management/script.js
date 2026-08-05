@@ -1,8 +1,21 @@
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api'
+    : '/api';
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://super-finalportifolio.onrender.com/api';
+// ── Auth helper: attach JWT to every admin request ───────────────────────────
+function authHeaders() {
+    const token = localStorage.getItem('authToken');
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    };
+}
 
+// ── Auth headers for FormData (no Content-Type override) ────────────────────
+function authHeadersNoContentType() {
+    const token = localStorage.getItem('authToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const editModal = document.getElementById('editProjectModal');
@@ -20,29 +33,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!editModal) return;
         editModal.classList.remove('active');
         editModal.setAttribute('aria-hidden', 'true');
-        if (editProjectForm) {
-            editProjectForm.reset();
-        }
+        if (editProjectForm) editProjectForm.reset();
+        // Clear image preview
+        const preview = document.getElementById('editImagePreview');
+        if (preview) preview.innerHTML = '';
+        const fileInput = document.getElementById('editImageFile');
+        if (fileInput) fileInput.value = '';
     }
 
-    if (closeEditModalBtn) {
-        closeEditModalBtn.addEventListener('click', closeEditModal);
-    }
-
-    if (cancelEditModalBtn) {
-        cancelEditModalBtn.addEventListener('click', closeEditModal);
-    }
+    if (closeEditModalBtn) closeEditModalBtn.addEventListener('click', closeEditModal);
+    if (cancelEditModalBtn) cancelEditModalBtn.addEventListener('click', closeEditModal);
 
     if (editModal) {
-        editModal.addEventListener('click', (event) => {
-            if (event.target === editModal) {
-                closeEditModal();
-            }
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) closeEditModal();
         });
     }
 
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && editModal && editModal.classList.contains('active')) {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && editModal && editModal.classList.contains('active')) {
             closeEditModal();
         }
     });
@@ -51,315 +60,284 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
         link.addEventListener('click', function (e) {
             e.preventDefault();
-            document.querySelectorAll('.sidebar-nav .nav-link').forEach(nav => nav.classList.remove('active'));
+            document.querySelectorAll('.sidebar-nav .nav-link').forEach(n => n.classList.remove('active'));
             this.classList.add('active');
-
-            document.querySelectorAll('.dashboard-section').forEach(section => section.classList.remove('active'));
-            const targetSection = document.getElementById(this.dataset.section);
-            if (targetSection) {
-                targetSection.classList.add('active');
-            }
-
-            if (this.dataset.section === 'manage-projects') {
-                loadProjectsTable();
-            }
-
-            if (this.dataset.section === 'recycle-bin') {
-                loadRecycleBin();
-            }
+            document.querySelectorAll('.dashboard-section').forEach(s => s.classList.remove('active'));
+            const target = document.getElementById(this.dataset.section);
+            if (target) target.classList.add('active');
+            if (this.dataset.section === 'manage-projects') loadProjectsTable();
+            if (this.dataset.section === 'recycle-bin') loadRecycleBin();
+            if (this.dataset.section === 'manage-skills') loadSkillsTable();
         });
     });
 
-    // Project Tabs (Add New Project / View/Edit Projects)
+    // Project Tabs
     document.querySelectorAll('.project-tabs .tab-button').forEach(button => {
         button.addEventListener('click', function () {
-            document.querySelectorAll('.project-tabs .tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.project-tabs .tab-button').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
-
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            const targetTab = document.getElementById(this.dataset.tab);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            if (this.dataset.tab === 'view-projects') {
-                loadProjectsTable();
-            }
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const tab = document.getElementById(this.dataset.tab);
+            if (tab) tab.classList.add('active');
+            if (this.dataset.tab === 'view-projects') loadProjectsTable();
         });
     });
 
-    // Initial load for projects table
+    // Initial load
     loadProjectsTable();
 
-    // Add Project Form Submission
+    // ── Add Project image preview ─────────────────────────────────────────────
+    const addImageInput = document.getElementById('addImageFile');
+    if (addImageInput) {
+        addImageInput.addEventListener('change', () => {
+            const preview = document.getElementById('addImagePreview');
+            if (!preview) return;
+            const file = addImageInput.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                preview.innerHTML = `<img src="${url}" alt="Preview" style="max-width:200px;max-height:120px;border-radius:6px;margin-top:8px;border:1px solid #ddd;">`;
+            } else {
+                preview.innerHTML = '';
+            }
+        });
+    }
 
+    // ── Add Project Form ──────────────────────────────────────────────────────
     const addProjectForm = document.getElementById('add-project-form');
-
     if (addProjectForm) {
         addProjectForm.addEventListener('submit', async function (e) {
             e.preventDefault();
-
-            // 1. Identify the submit button and save its original state
             const submitBtn = this.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
+            const originalText = submitBtn.innerHTML;
 
-            // 2. Visual Feedback: Disable button and show loading state
             submitBtn.disabled = true;
-            submitBtn.innerHTML = `<div class="spinner"></div> Adding Project`;
+            submitBtn.innerHTML = `<div class="spinner"></div> Adding...`;
 
             const formData = new FormData(this);
             const projectData = Object.fromEntries(formData.entries());
 
             try {
-                console.log("[Senior Log] Submitting project data to server...");
-
-                const response = await fetch(`${API_BASE_URL}/admin/projects`, {
+                // Step 1: save project text data
+                const res = await fetch(`${API_BASE_URL}/admin/projects`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(projectData)
+                    headers: authHeaders(),
+                    body: JSON.stringify(projectData),
                 });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const result = await res.json();
+                const newId = result.id;
 
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                // Step 2: upload image if one was selected
+                const imageFile = document.getElementById('addImageFile')?.files[0];
+                if (imageFile && newId) {
+                    submitBtn.innerHTML = `<div class="spinner"></div> Uploading image...`;
+                    await uploadProjectImage(newId, imageFile);
+                }
 
-                const result = await response.json();
-                console.log("[Senior Log] Server response:", result);
-
-                alert("Success: " + result.message);
-                this.reset(); // Clear the form
-
-                // Refresh the projects table automatically
-                if (typeof loadProjectsTable === 'function') loadProjectsTable();
-
-                // Switch to the view projects tab
+                showNotification('✅ ' + result.message, 'success');
+                this.reset();
+                document.getElementById('addImagePreview').innerHTML = '';
+                loadProjectsTable();
                 document.querySelector('.project-tabs .tab-button[data-tab="view-projects"]').click();
-
-            } catch (error) {
-                console.error('[Senior Error] Submission failed:', error);
-                alert('Failed to add project. Please check the server logs.');
+            } catch (err) {
+                console.error('[Error] Add project failed:', err);
+                showNotification('Failed to add project. Check the console.', 'error');
             } finally {
-                // 3. Always re-enable the button, even if it fails
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
+                submitBtn.innerHTML = originalText;
             }
         });
     }
 
-    // S/No Implementation
-
-    // 1. FETCH PROJECTS: Get data from the server
+    // ── Load & Render Projects Table ─────────────────────────────────────────
     async function loadProjectsTable() {
         const tableBody = document.getElementById('projectsTableBody');
         if (!tableBody) return;
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#007bff;"></div></td></tr>';
 
         try {
-            console.log("[Senior Log] Fetching projects from API...");
-            const response = await fetch(`${API_BASE_URL}/projects`);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-            const projects = await response.json();
-
-            // --- SENIOR MOVE: SORT BY DATABASE ID (Oldest First) ---
-            // This ensures your projects always appear in the order they were created.
-            const sortedProjects = projects.sort((a, b) => a.id - b.id);
-
-            // Pass the sorted list to the renderer
-            renderProjectsTable(sortedProjects);
-        } catch (error) {
-            console.error('[Senior Error] Failed to load projects:', error);
-            tableBody.innerHTML = '<tr><td colspan="6" class="error">Failed to load projects. Is the server running?</td></tr>';
+            const res = await fetch(`${API_BASE_URL}/projects`, { headers: authHeaders() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const projects = await res.json();
+            renderProjectsTable(projects.sort((a, b) => a.id - b.id));
+        } catch (err) {
+            console.error('[Error] Load projects failed:', err);
+            tableBody.innerHTML = '<tr><td colspan="7" class="error" style="text-align:center;padding:20px;color:#dc3545;">Failed to load projects. Is the server running?</td></tr>';
         }
     }
 
     function renderProjectsTable(projects) {
         const tableBody = document.getElementById('projectsTableBody');
-
         if (!projects || projects.length === 0) {
-            tableBody.innerHTML = '<tr><td style="text-align: center; color: #28a745;" colspan="6" >No projects found. Add one to get started!</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#28a745;padding:20px;">No projects found. Add one to get started!</td></tr>';
             return;
         }
-
-        // --- EXPLICIT DATA MAPPING ---
-        // We sort first, then map only the fields we want to show.
-        const sortedProjects = projects.sort((a, b) => a.id - b.id);
-
-        tableBody.innerHTML = sortedProjects.map((project, index) => {
-            // We "Extract" only the fields we need (Filtering out the rest)
-            const { id, name, year, live_url, github_url } = project;
-
-            return `
+        tableBody.innerHTML = projects.map((p, i) => `
             <tr>
-                <!-- S/No: Purely Frontend Calculation -->
-                <td style="font-weight: bold;">${index + 1}</td> 
-                
-                <!-- Display Data: Using the filtered fields -->
-                <td>${name || 'N/A'}</td>
-                <td>${year || 'N/A'}</td>
-                <td><a href="${live_url}" target="_blank" rel="noopener noreferrer" class="table-link table-link-live">Live Link</a></td>
-                <td><a href="${github_url}" target="_blank" rel="noopener noreferrer" class="table-link table-link-github">GitHub Link</a></td>
-                
+                <td style="font-weight:bold;">${i + 1}</td>
+                <td>
+                    ${p.image_path
+                        ? `<img src="${p.image_path}" alt="${p.name}" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #ddd;">`
+                        : '<span style="color:#aaa;font-size:12px;">No image</span>'
+                    }
+                </td>
+                <td>${p.name || 'N/A'}</td>
+                <td>${p.year || 'N/A'}</td>
+                <td>${p.live_url ? `<a href="${p.live_url}" target="_blank" class="table-link table-link-live">Live</a>` : '—'}</td>
+                <td>${p.github_url ? `<a href="${p.github_url}" target="_blank" class="table-link table-link-github">GitHub</a>` : '—'}</td>
                 <td>
                     <div class="action-btns">
-                        <!-- ID: Kept only for backend operations -->
-                        <button onclick="editProject(${id})" class="btn-edit">Edit</button>
-                        <button onclick="deleteProject(${id})" class="btn-delete">Delete</button>
+                        <button onclick="editProject(${p.id})" class="btn-edit">Edit</button>
+                        <button onclick="deleteProject(${p.id})" class="btn-delete">Delete</button>
                     </div>
                 </td>
             </tr>
-        `;
-        }).join('');
-
-        console.log("[Senior Log] Table rendered with explicit data filtering.");
+        `).join('');
     }
 
-
-
-
-    // Edit Project
+    // ── Edit Project ──────────────────────────────────────────────────────────
     async function editProject(id) {
         try {
-            const response = await fetch(`${API_BASE_URL}/projects`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            const res = await fetch(`${API_BASE_URL}/admin/projects/${id}`, { headers: authHeaders() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const p = await res.json();
+
+            document.getElementById('editProjectId').value = p.id;
+            document.getElementById('editProjectName').value = p.name || '';
+            document.getElementById('editProjectDescription').value = p.description || '';
+            document.getElementById('editProjectLiveUrl').value = p.live_url || '';
+            document.getElementById('editProjectGithubUrl').value = p.github_url || '';
+            document.getElementById('editProjectYear').value = p.year || new Date().getFullYear();
+
+            // Show current image in the modal
+            const preview = document.getElementById('editImagePreview');
+            if (preview) {
+                preview.innerHTML = p.image_path
+                    ? `<p style="font-size:12px;color:#666;margin-bottom:6px;">Current image:</p>
+                       <img src="${p.image_path}" alt="current" style="max-width:180px;max-height:110px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+                    : '<p style="font-size:12px;color:#aaa;">No image set.</p>';
             }
-
-            const projects = await response.json();
-            const project = projects.find((item) => Number(item.id) === Number(id));
-
-            if (!project) {
-                alert('Project not found. Please refresh and try again.');
-                return;
-            }
-
-            const idField = document.getElementById('editProjectId');
-            const nameField = document.getElementById('editProjectName');
-            const descriptionField = document.getElementById('editProjectDescription');
-            const liveUrlField = document.getElementById('editProjectLiveUrl');
-            const githubUrlField = document.getElementById('editProjectGithubUrl');
-            const yearField = document.getElementById('editProjectYear');
-
-            if (!idField || !nameField || !descriptionField || !liveUrlField || !githubUrlField || !yearField) {
-                alert('Edit form is missing required fields.');
-                return;
-            }
-
-            idField.value = project.id;
-            nameField.value = project.name || '';
-            descriptionField.value = project.description || '';
-            liveUrlField.value = project.live_url || '';
-            githubUrlField.value = project.github_url || '';
-            yearField.value = project.year || new Date().getFullYear();
 
             openEditModal();
-            nameField.focus();
-        } catch (error) {
-            console.error('Error editing project:', error);
-            alert(`Failed to edit project: ${error.message}`);
+            document.getElementById('editProjectName').focus();
+        } catch (err) {
+            console.error('[Error] Edit project load failed:', err);
+            showNotification('Failed to load project data.', 'error');
         }
     }
 
+    // Edit form submit (text fields only)
     if (editProjectForm) {
-        editProjectForm.addEventListener('submit', async function (event) {
-            event.preventDefault();
-
+        editProjectForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
             const submitBtn = this.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn ? submitBtn.innerHTML : 'Save Changes';
-
+            const originalText = submitBtn ? submitBtn.innerHTML : 'Save Changes';
             const projectId = document.getElementById('editProjectId')?.value;
-            const name = document.getElementById('editProjectName')?.value.trim() || '';
-            const description = document.getElementById('editProjectDescription')?.value.trim() || '';
-            const liveUrl = document.getElementById('editProjectLiveUrl')?.value.trim() || '';
+
+            if (!projectId) { showNotification('Missing project ID.', 'error'); return; }
+
+            const name      = document.getElementById('editProjectName')?.value.trim() || '';
+            const desc      = document.getElementById('editProjectDescription')?.value.trim() || '';
+            const liveUrl   = document.getElementById('editProjectLiveUrl')?.value.trim() || '';
             const githubUrl = document.getElementById('editProjectGithubUrl')?.value.trim() || '';
-            const yearValue = document.getElementById('editProjectYear')?.value.trim() || '';
+            const yearVal   = document.getElementById('editProjectYear')?.value.trim() || '';
 
-            if (!projectId) {
-                alert('Missing project ID for edit operation.');
-                return;
-            }
-
-            if (!name) {
-                alert('Project name is required.');
-                return;
-            }
-
-            const parsedYear = Number(yearValue);
+            if (!name) { showNotification('Project name is required.', 'error'); return; }
+            const parsedYear = Number(yearVal);
             if (!Number.isInteger(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
-                alert('Please enter a valid year between 1900 and 2100.');
+                showNotification('Please enter a valid year (1900–2100).', 'error');
                 return;
             }
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = `<div class="spinner"></div> Saving...`;
-            }
-
-            const updatePayload = {
-                name,
-                description,
-                live_url: liveUrl,
-                github_url: githubUrl,
-                year: parsedYear
-            };
+            if (submitBtn) { submitBtn.disabled = true; submitBtn.innerHTML = `<div class="spinner"></div> Saving...`; }
 
             try {
-                const updateResponse = await fetch(`${API_BASE_URL}/admin/projects/${projectId}`, {
+                const res = await fetch(`${API_BASE_URL}/admin/projects/${projectId}`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updatePayload)
+                    headers: authHeaders(),
+                    body: JSON.stringify({ name, description: desc, live_url: liveUrl, github_url: githubUrl, year: parsedYear }),
                 });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
 
-                const rawResponse = await updateResponse.text();
-                let result = {};
-
-                if (rawResponse) {
-                    try {
-                        result = JSON.parse(rawResponse);
-                    } catch (_) {
-                        result = { error: rawResponse };
-                    }
-                }
-
-                if (!updateResponse.ok) {
-                    const serverError = result.error || result.message || `HTTP error! status: ${updateResponse.status}`;
-                    throw new Error(serverError);
-                }
-
-                alert(result.message || 'Project updated successfully.');
+                showNotification(result.message || 'Project updated!', 'success');
                 closeEditModal();
                 loadProjectsTable();
-            } catch (error) {
-                console.error('Error updating project:', error);
-                alert(`Failed to edit project: ${error.message}`);
+            } catch (err) {
+                console.error('[Error] Update failed:', err);
+                showNotification(`Failed to update: ${err.message}`, 'error');
             } finally {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalBtnText;
-                }
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalText; }
             }
         });
     }
 
-    // Delete Project
-    async function deleteProject(id) {
-        if (!confirm(`Are you sure you want to delete project with ID: ${id}?`)) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/admin/projects/${id}`, {
-                method: 'DELETE',
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+    // Upload image from edit modal
+    const editImageFile = document.getElementById('editImageFile');
+    if (editImageFile) {
+        // Show a local preview when a file is chosen
+        editImageFile.addEventListener('change', () => {
+            const file = editImageFile.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            const preview = document.getElementById('editImagePreview');
+            if (preview) {
+                preview.innerHTML = `<p style="font-size:12px;color:#666;margin-bottom:6px;">New image preview:</p>
+                    <img src="${url}" alt="Preview" style="max-width:180px;max-height:110px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`;
             }
-            const result = await response.json();
-            alert(result.message);
-            loadProjectsTable(); // Refresh table
-        } catch (error) {
-            console.error('Error deleting project:', error);
-            alert('Failed to delete project.');
+        });
+    }
+
+    const uploadImageBtn = document.getElementById('uploadEditImageBtn');
+    if (uploadImageBtn) {
+        uploadImageBtn.addEventListener('click', async () => {
+            const projectId = document.getElementById('editProjectId')?.value;
+            const file = document.getElementById('editImageFile')?.files[0];
+            if (!projectId) { showNotification('Save the project first.', 'error'); return; }
+            if (!file) { showNotification('Please choose an image file first.', 'error'); return; }
+
+            uploadImageBtn.disabled = true;
+            uploadImageBtn.innerHTML = `<div class="spinner"></div> Uploading...`;
+
+            try {
+                const imagePath = await uploadProjectImage(projectId, file);
+                showNotification('✅ Image uploaded successfully!', 'success');
+                // Refresh the current image preview
+                const preview = document.getElementById('editImagePreview');
+                if (preview && imagePath) {
+                    preview.innerHTML = `<p style="font-size:12px;color:#666;margin-bottom:6px;">Current image:</p>
+                        <img src="${imagePath}" alt="current" style="max-width:180px;max-height:110px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`;
+                }
+                document.getElementById('editImageFile').value = '';
+                loadProjectsTable();
+            } catch (err) {
+                showNotification(`Upload failed: ${err.message}`, 'error');
+            } finally {
+                uploadImageBtn.disabled = false;
+                uploadImageBtn.innerHTML = `<i class="fas fa-upload"></i> Upload Image`;
+            }
+        });
+    }
+
+    // ── Delete Project ────────────────────────────────────────────────────────
+    async function deleteProject(id) {
+        if (!confirm(`Move project ID ${id} to the Recycle Bin?`)) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/admin/projects/${id}`, {
+                method: 'DELETE',
+                headers: authHeaders(),
+            });
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+            showNotification(result.message, 'success');
+            loadProjectsTable();
+        } catch (err) {
+            console.error('[Error] Delete failed:', err);
+            showNotification('Failed to delete project.', 'error');
         }
     }
 
-    // Inline onclick handlers need global function references.
+    // Expose to inline onclick handlers
     window.loadProjectsTable = loadProjectsTable;
     window.editProject = editProject;
     window.deleteProject = deleteProject;
@@ -367,20 +345,47 @@ document.addEventListener('DOMContentLoaded', () => {
     window.permanentDelete = permanentDelete;
 });
 
+// ── Image Upload Helper (used by both add & edit flows) ─────────────────────
+async function uploadProjectImage(projectId, file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    const token = localStorage.getItem('authToken');
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+    const API_BASE_URL = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : '/api';
+
+    const res = await fetch(`${API_BASE_URL}/admin/projects/${projectId}/upload-image`, {
+        method: 'POST',
+        headers,
+        body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.image_path;
+}
+
+// ── Recycle Bin ──────────────────────────────────────────────────────────────
 async function loadRecycleBin() {
     const body = document.getElementById('recycle-bin-body');
     if (!body) return;
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#dc3545;"></div></td></tr>';
+
+    const API_BASE_URL = window.location.hostname === 'localhost'
+        ? 'http://localhost:5000/api'
+        : '/api';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/recycle-bin`);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const projects = await response.json();
+        const token = localStorage.getItem('authToken');
+        const res = await fetch(`${API_BASE_URL}/admin/recycle-bin`, {
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const projects = await res.json();
 
         if (!Array.isArray(projects) || projects.length === 0) {
-            body.innerHTML = '<tr><td colspan="4" style="text-align:center;">Recycle Bin is empty.</td></tr>';
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:#888;font-style:italic;">Recycle Bin is empty.</td></tr>';
             return;
         }
 
@@ -395,27 +400,264 @@ async function loadRecycleBin() {
                 </td>
             </tr>
         `).join('');
-    } catch (e) {
-        console.error('Error loading recycle bin:', e);
-        body.innerHTML = '<tr><td colspan="4" class="error">Failed to load recycle bin.</td></tr>';
+    } catch (err) {
+        console.error('[Error] Load recycle bin failed:', err);
+        body.innerHTML = '<tr><td colspan="4" class="error" style="text-align:center;color:#dc3545;padding:20px;">Failed to load recycle bin.</td></tr>';
     }
 }
 
 async function restoreProject(id) {
-    await fetch(`${API_BASE_URL}/admin/projects/${id}/restore`, { method: 'POST' });
+    const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+    const token = localStorage.getItem('authToken');
+    await fetch(`${API_BASE_URL}/admin/projects/${id}/restore`, {
+        method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+    showNotification('Project restored!', 'success');
     loadRecycleBin();
-    loadProjectsTable(); // Refresh the main table too
+    if (typeof loadProjectsTable === 'function') loadProjectsTable();
 }
 
 async function permanentDelete(id) {
-    if (!confirm("This cannot be undone. Delete forever?")) return;
-    await fetch(`${API_BASE_URL}/admin/projects/${id}/permanent`, { method: 'DELETE' });
+    if (!confirm('This cannot be undone. Delete forever?')) return;
+    const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+    const token = localStorage.getItem('authToken');
+    await fetch(`${API_BASE_URL}/admin/projects/${id}/permanent`, {
+        method: 'DELETE',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+    });
+    showNotification('Project permanently deleted.', 'success');
     loadRecycleBin();
 }
 
-// Logout functionality
+// ── Toast notification (replaces alert()) ───────────────────────────────────
+function showNotification(message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-size: 14px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        max-width: 340px;
+        animation: slideIn 0.25s ease-out;
+    `;
+    toast.textContent = message;
+
+    if (!document.getElementById('toast-style')) {
+        const style = document.createElement('style');
+        style.id = 'toast-style';
+        style.textContent = '@keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }';
+        document.head.appendChild(style);
+    }
+
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 320);
+    }, 3500);
+}
+
+// Logout
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     window.location.href = "login.html";
 });
+
+// ══════════════════════════════════════════════
+// SKILLS MANAGEMENT
+// ══════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ── Skill tabs (separate from project tabs) ──
+    document.querySelectorAll('#manage-skills .project-tabs .tab-button').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('#manage-skills .project-tabs .tab-button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('#manage-skills .tab-content').forEach(c => c.classList.remove('active'));
+            const tab = document.getElementById(this.dataset.tab);
+            if (tab) tab.classList.add('active');
+            if (this.dataset.tab === 'view-skills') loadSkillsTable();
+        });
+    });
+
+    // ── Add Skill Form ──
+    const addSkillForm = document.getElementById('add-skill-form');
+    if (addSkillForm) {
+        addSkillForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const orig = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Adding…';
+            const data = {
+                title: document.getElementById('skillTitle').value.trim(),
+                description: document.getElementById('skillDescription').value.trim(),
+                icon: document.getElementById('skillIcon').value.trim() || 'fa-solid fa-star',
+                sort_order: Number(document.getElementById('skillOrder').value) || 0,
+            };
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/skills`, {
+                    method: 'POST', headers: authHeaders(), body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+                showNotification('✅ ' + result.message, 'success');
+                this.reset();
+                document.getElementById('skillIcon').value = 'fa-solid fa-star';
+                document.getElementById('skillOrder').value = '0';
+                // Switch to view tab
+                document.querySelector('#manage-skills .tab-button[data-tab="view-skills"]')?.click();
+            } catch (err) {
+                showNotification('Failed to add skill: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        });
+    }
+
+    // ── Edit Skill Modal setup ──
+    const editSkillModal  = document.getElementById('editSkillModal');
+    const editSkillForm   = document.getElementById('edit-skill-form');
+    const closeSkillBtn   = document.getElementById('closeEditSkillModalBtn');
+    const cancelSkillBtn  = document.getElementById('cancelEditSkillModalBtn');
+
+    function openSkillModal()  { if (editSkillModal) { editSkillModal.classList.add('active'); editSkillModal.setAttribute('aria-hidden','false'); } }
+    function closeSkillModal() {
+        if (!editSkillModal) return;
+        editSkillModal.classList.remove('active');
+        editSkillModal.setAttribute('aria-hidden','true');
+        if (editSkillForm) editSkillForm.reset();
+    }
+
+    if (closeSkillBtn)  closeSkillBtn.addEventListener('click', closeSkillModal);
+    if (cancelSkillBtn) cancelSkillBtn.addEventListener('click', closeSkillModal);
+    if (editSkillModal) editSkillModal.addEventListener('click', e => { if (e.target === editSkillModal) closeSkillModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && editSkillModal?.classList.contains('active')) closeSkillModal(); });
+
+    // Edit skill form submit
+    if (editSkillForm) {
+        editSkillForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const orig = btn.innerHTML;
+            const id = document.getElementById('editSkillId').value;
+            if (!id) { showNotification('Missing skill ID.', 'error'); return; }
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Saving…';
+            const data = {
+                title:       document.getElementById('editSkillTitle').value.trim(),
+                description: document.getElementById('editSkillDescription').value.trim(),
+                icon:        document.getElementById('editSkillIcon').value.trim() || 'fa-solid fa-star',
+                sort_order:  Number(document.getElementById('editSkillOrder').value) || 0,
+                is_active:   document.getElementById('editSkillActive').checked,
+            };
+            if (!data.title) { showNotification('Title is required.', 'error'); btn.disabled = false; btn.innerHTML = orig; return; }
+            try {
+                const res = await fetch(`${API_BASE_URL}/admin/skills/${id}`, {
+                    method: 'PUT', headers: authHeaders(), body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+                showNotification(result.message || 'Skill updated!', 'success');
+                closeSkillModal();
+                loadSkillsTable();
+            } catch (err) {
+                showNotification('Update failed: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = orig;
+            }
+        });
+    }
+
+    // Expose to inline onclick
+    window.editSkill   = editSkill;
+    window.deleteSkill = deleteSkill;
+    window.loadSkillsTable = loadSkillsTable;
+});
+
+async function loadSkillsTable() {
+    const body = document.getElementById('skillsTableBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><div class="spinner" style="margin:0 auto;border-color:#ccc;border-top-color:#007bff;"></div></td></tr>';
+    const API = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+    try {
+        const res = await fetch(`${API}/admin/skills`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const skills = await res.json();
+        if (!skills || skills.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#28a745;padding:20px;">No skills yet. Add one above!</td></tr>';
+            return;
+        }
+        body.innerHTML = skills.map((s, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td><i class="${s.icon || 'fa-solid fa-star'}" style="font-size:18px;color:#007bff;"></i></td>
+                <td>${s.title || ''}</td>
+                <td>${s.sort_order}</td>
+                <td><span style="color:${s.is_active ? '#28a745' : '#dc3545'}">${s.is_active ? 'Yes' : 'No'}</span></td>
+                <td>
+                    <div class="action-btns">
+                        <button onclick="editSkill(${s.id})" class="btn-edit">Edit</button>
+                        <button onclick="deleteSkill(${s.id})" class="btn-delete">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#dc3545;padding:20px;">Failed to load skills.</td></tr>';
+    }
+}
+
+async function editSkill(id) {
+    const API = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+    try {
+        const res = await fetch(`${API}/admin/skills`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        });
+        const skills = await res.json();
+        const s = skills.find(x => x.id === id);
+        if (!s) { showNotification('Skill not found.', 'error'); return; }
+        document.getElementById('editSkillId').value        = s.id;
+        document.getElementById('editSkillTitle').value     = s.title || '';
+        document.getElementById('editSkillDescription').value = s.description || '';
+        document.getElementById('editSkillIcon').value      = s.icon || 'fa-solid fa-star';
+        document.getElementById('editSkillOrder').value     = s.sort_order || 0;
+        document.getElementById('editSkillActive').checked  = !!s.is_active;
+        document.getElementById('editSkillModal').classList.add('active');
+        document.getElementById('editSkillModal').setAttribute('aria-hidden', 'false');
+        document.getElementById('editSkillTitle').focus();
+    } catch (err) {
+        showNotification('Failed to load skill data.', 'error');
+    }
+}
+
+async function deleteSkill(id) {
+    if (!confirm(`Delete skill ID ${id}? This cannot be undone.`)) return;
+    const API = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+    try {
+        const res = await fetch(`${API}/admin/skills/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+        showNotification(result.message, 'success');
+        loadSkillsTable();
+    } catch (err) {
+        showNotification('Delete failed: ' + err.message, 'error');
+    }
+}

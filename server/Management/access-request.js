@@ -2,7 +2,9 @@
 // ACCESS REQUEST PAGE JAVASCRIPT
 // ============================================
 
-const API_BASE_URL = "https://super-finalportifolio.onrender.com";
+const API_BASE_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : '';
 
 // DOM Elements
 const accessRequestForm = document.getElementById("accessRequestForm");
