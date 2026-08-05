@@ -1,12 +1,24 @@
 {
   "version": 2,
   "builds": [
-    { "src": "server/server.js",      "use": "@vercel/node"   },
-    { "src": "client/**",             "use": "@vercel/static" },
-    { "src": "server/Management/**",  "use": "@vercel/static" }
+    { "src": "server/server.js",     "use": "@vercel/node"   },
+    { "src": "client/**",            "use": "@vercel/static" },
+    { "src": "server/Management/**", "use": "@vercel/static" }
   ],
-  "rewrites": [
-    { "source": "/api/:path*", "destination": "/server/server.js" },
-    { "source": "/:path*",     "destination": "/client/:path*"    }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/server/server.js" },
+    { "src": "/Management/(.*)", "dest": "/server/Management/$1" },
+    { "src": "/css_styling/(.*)", "dest": "/client/css_styling/$1" },
+    { "src": "/images/(.*)",     "dest": "/client/images/$1" },
+    { "src": "/js/(.*)",         "dest": "/client/js/$1" },
+    { "src": "/(.*\\.html)",     "dest": "/client/$1" },
+    { "src": "/(.*\\.css)",      "dest": "/client/$1" },
+    { "src": "/(.*\\.js)",       "dest": "/client/$1" },
+    { "src": "/(.*\\.pdf)",      "dest": "/client/$1" },
+    { "src": "/(.*\\.png)",      "dest": "/client/$1" },
+    { "src": "/(.*\\.jpg)",      "dest": "/client/$1" },
+    { "src": "/(.*\\.ico)",      "dest": "/client/$1" },
+    { "src": "/",                "dest": "/client/index.html" },
+    { "src": "/(.*)",            "dest": "/client/index.html" }
   ]
 }
