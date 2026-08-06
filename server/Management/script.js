@@ -68,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (this.dataset.section === 'manage-projects') loadProjectsTable();
             if (this.dataset.section === 'recycle-bin') loadRecycleBin();
             if (this.dataset.section === 'manage-skills') loadSkillsTable();
+            if (this.dataset.section === 'manage-messages') loadMessagesTable();
         });
     });
 
@@ -83,9 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ── Contact messages modal ────────────────────────────────────────────────
+    const viewMessageModal = document.getElementById('viewMessageModal');
+
+    function closeViewMessageModal() {
+        if (!viewMessageModal) return;
+        viewMessageModal.classList.remove('active');
+        viewMessageModal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.getElementById('closeViewMessageBtn')?.addEventListener('click', closeViewMessageModal);
+    document.getElementById('closeViewMessageFooterBtn')?.addEventListener('click', closeViewMessageModal);
+    viewMessageModal?.addEventListener('click', e => { if (e.target === viewMessageModal) closeViewMessageModal(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && viewMessageModal?.classList.contains('active')) closeViewMessageModal();
+    });
+
     // ── Dismiss page loader once DOM + first data load is done ──
     async function initDashboard() {
         await loadProjectsTable();
+        refreshUnreadBadge();
         const loader = document.getElementById('page-loader');
         if (loader) {
             loader.classList.add('fade-out');
@@ -691,6 +709,146 @@ async function deleteSkill(id) {
         if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
         showNotification(result.message, 'success');
         loadSkillsTable();
+    } catch (err) {
+        showNotification('Delete failed: ' + err.message, 'error');
+    }
+}
+
+// ── CONTACT MESSAGES ─────────────────────────────────────────────────────────
+
+let contactMessages = [];
+
+// Message content comes from an anonymous public form, so it is never trusted
+// as markup.
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[char]);
+}
+
+function formatMessageDate(value) {
+    const date = new Date(value);
+    return isNaN(date) ? '' : date.toLocaleString();
+}
+
+async function fetchMessages() {
+    const res = await fetch(`${API_BASE_URL}/admin/contact-messages`, { headers: authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+}
+
+function updateUnreadBadge(messages) {
+    const badge = document.getElementById('unreadBadge');
+    if (!badge) return;
+    const unread = messages.filter(m => !m.is_read).length;
+    badge.textContent = unread;
+    badge.hidden = unread === 0;
+}
+
+async function refreshUnreadBadge() {
+    try {
+        updateUnreadBadge(await fetchMessages());
+    } catch (err) {
+        console.error('[Error] Unread count failed:', err);
+    }
+}
+
+async function loadMessagesTable() {
+    const body = document.getElementById('messagesTableBody');
+    if (!body) return;
+    body.innerHTML = Array(4).fill(0).map(() => `
+        <tr class="skeleton-row">
+            <td><span class="skel" style="width:20px"></span></td>
+            <td><span class="skel" style="width:120px"></span></td>
+            <td><span class="skel" style="width:100px"></span></td>
+            <td><span class="skel" style="width:150px"></span></td>
+            <td><span class="skel" style="width:130px"></span></td>
+            <td><span class="skel" style="width:50px"></span></td>
+            <td><span class="skel" style="width:150px"></span></td>
+        </tr>`).join('');
+
+    try {
+        contactMessages = await fetchMessages();
+        updateUnreadBadge(contactMessages);
+
+        if (contactMessages.length === 0) {
+            body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#28a745;padding:20px;">No messages yet.</td></tr>';
+            return;
+        }
+
+        body.innerHTML = contactMessages.map((m, i) => `
+            <tr class="${m.is_read ? '' : 'message-unread'}">
+                <td>${i + 1}</td>
+                <td>${escapeHtml(formatMessageDate(m.created_at))}</td>
+                <td>${escapeHtml(m.name)}</td>
+                <td><a href="mailto:${escapeHtml(m.email)}">${escapeHtml(m.email)}</a></td>
+                <td>${escapeHtml(m.subject) || '<span style="color:#888;">(none)</span>'}</td>
+                <td><span style="color:${m.is_read ? '#888' : '#28a745'};font-weight:600;">${m.is_read ? 'Read' : 'New'}</span></td>
+                <td>
+                    <div class="action-btns">
+                        <button onclick="viewMessage(${m.id})" class="btn-edit">View</button>
+                        <button onclick="toggleMessageRead(${m.id})" class="btn-secondary">${m.is_read ? 'Unread' : 'Read'}</button>
+                        <button onclick="deleteMessage(${m.id})" class="btn-delete">Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#dc3545;padding:20px;">Failed to load messages.</td></tr>';
+    }
+}
+
+async function viewMessage(id) {
+    const m = contactMessages.find(x => x.id === id);
+    if (!m) { showNotification('Message not found.', 'error'); return; }
+
+    document.getElementById('viewMessageFrom').textContent = `${m.name} <${m.email}>`;
+    document.getElementById('viewMessageDate').textContent = formatMessageDate(m.created_at);
+    document.getElementById('viewMessageSubject').textContent = m.subject || '(none)';
+    document.getElementById('viewMessageBody').textContent = m.message;
+
+    const replyLink = document.getElementById('viewMessageReply');
+    const replySubject = m.subject ? `Re: ${m.subject}` : 'Re: your message';
+    replyLink.href = `mailto:${m.email}?subject=${encodeURIComponent(replySubject)}`;
+
+    const modal = document.getElementById('viewMessageModal');
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+
+    if (!m.is_read) await setMessageRead(id, true);
+}
+
+async function setMessageRead(id, isRead) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/contact-messages/${id}/read`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify({ is_read: isRead }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadMessagesTable();
+    } catch (err) {
+        showNotification('Could not update the message status.', 'error');
+    }
+}
+
+async function toggleMessageRead(id) {
+    const m = contactMessages.find(x => x.id === id);
+    if (!m) return;
+    await setMessageRead(id, !m.is_read);
+}
+
+async function deleteMessage(id) {
+    if (!confirm('Delete this message? This cannot be undone.')) return;
+    try {
+        const res = await fetch(`${API_BASE_URL}/admin/contact-messages/${id}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+        showNotification(result.message, 'success');
+        loadMessagesTable();
     } catch (err) {
         showNotification('Delete failed: ' + err.message, 'error');
     }

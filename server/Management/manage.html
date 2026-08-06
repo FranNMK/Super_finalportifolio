@@ -38,6 +38,8 @@
 
                     <li><a href="#" class="nav-link" data-section="manage-skills"><i class="fas fa-cogs"></i> Manage
                             Skills</a></li>
+                    <li><a href="#" class="nav-link" data-section="manage-messages"><i class="fas fa-envelope"></i>
+                            Messages <span id="unreadBadge" class="nav-badge" hidden></span></a></li>
                     <li><a href="#" class="nav-link" data-section="recycle-bin" style="color: #ff4d4d;"><i
                                 class="fas fa-trash-alt"></i> Recycle Bin</a></li>
                 </ul>
@@ -181,6 +183,28 @@
                 </div>
             </section>
 
+            <section id="manage-messages" class="dashboard-section">
+                <h2>Contact Messages</h2>
+                <p>Messages sent from the portfolio contact form. Nothing is emailed — everything lands here.</p>
+                <div class="table-container">
+                    <table class="projects-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Received</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messagesTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <section id="recycle-bin" class="dashboard-section">
                 <h2 style="color: #4dffa6;">Recycle Bin</h2>
                 <p>Projects here are hidden from your portfolio. You can restore them or delete them permanently.</p>
@@ -304,6 +328,38 @@
                     <button type="submit" class="btn-primary">Save Changes</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- View Message Modal -->
+    <div id="viewMessageModal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="viewMessageTitle">
+            <div class="modal-header">
+                <h3 id="viewMessageTitle">Message</h3>
+                <button type="button" id="closeViewMessageBtn" class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-form">
+                <div class="form-group">
+                    <label>From:</label>
+                    <p id="viewMessageFrom" class="message-meta"></p>
+                </div>
+                <div class="form-group">
+                    <label>Received:</label>
+                    <p id="viewMessageDate" class="message-meta"></p>
+                </div>
+                <div class="form-group">
+                    <label>Subject:</label>
+                    <p id="viewMessageSubject" class="message-meta"></p>
+                </div>
+                <div class="form-group">
+                    <label>Message:</label>
+                    <div id="viewMessageBody" class="message-body"></div>
+                </div>
+                <div class="modal-actions">
+                    <a id="viewMessageReply" class="btn-primary" href="#">Reply by Email</a>
+                    <button type="button" id="closeViewMessageFooterBtn" class="btn-secondary">Close</button>
+                </div>
+            </div>
         </div>
     </div>
 

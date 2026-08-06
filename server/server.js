@@ -7,7 +7,6 @@ require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
 
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
-const nodemailer = require("nodemailer");
 
 const hasCloudinaryConfig =
   !!process.env.CLOUDINARY_CLOUD_NAME &&
@@ -337,7 +336,7 @@ app.get("/api/skills", (req, res) => {
 });
 
 // ============================================
-// CONTACT FORM — stored in the database, then emailed
+// CONTACT FORM — stored in the database, read from the admin panel
 // ============================================
 
 const CONTACT_LIMITS = { name: 120, email: 255, subject: 200, message: 5000 };
@@ -358,43 +357,11 @@ function isRateLimited(ip) {
   return hits.length > CONTACT_RATE_LIMIT.max;
 }
 
-// Header fields must never carry CR/LF — that is how SMTP header injection works.
-function sanitizeHeaderValue(value, maxLength) {
+function sanitizeSingleLine(value, maxLength) {
   return String(value ?? "")
     .replace(/[\r\n]+/g, " ")
     .trim()
     .slice(0, maxLength);
-}
-
-function escapeHtml(value) {
-  return String(value ?? "").replace(
-    /[&<>"']/g,
-    (char) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;",
-      })[char],
-  );
-}
-
-let contactTransporter = null;
-
-function getContactTransporter() {
-  if (!contactTransporter) {
-    contactTransporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || "smtp.gmail.com",
-      port: Number(process.env.EMAIL_PORT) || 465,
-      secure: (Number(process.env.EMAIL_PORT) || 465) === 465,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
-  }
-  return contactTransporter;
 }
 
 app.post("/api/contact", async (req, res) => {
@@ -403,9 +370,9 @@ app.post("/api/contact", async (req, res) => {
     return res.json({ message: "Message received! I will get back to you soon." });
   }
 
-  const name = sanitizeHeaderValue(req.body.name, CONTACT_LIMITS.name);
-  const email = sanitizeHeaderValue(req.body.email, CONTACT_LIMITS.email);
-  const subject = sanitizeHeaderValue(req.body.subject, CONTACT_LIMITS.subject);
+  const name = sanitizeSingleLine(req.body.name, CONTACT_LIMITS.name);
+  const email = sanitizeSingleLine(req.body.email, CONTACT_LIMITS.email);
+  const subject = sanitizeSingleLine(req.body.subject, CONTACT_LIMITS.subject);
   const message = String(req.body.message ?? "")
     .trim()
     .slice(0, CONTACT_LIMITS.message);
@@ -422,71 +389,28 @@ app.post("/api/contact", async (req, res) => {
       .json({ error: "Too many messages sent. Please try again in a few minutes." });
   }
 
-  // Store first so the message survives any SMTP failure.
-  let messageId = null;
+  // The database is the only delivery channel — a failed insert is a lost message.
   try {
     const [result] = await db
       .promise()
       .query(
         "INSERT INTO contact_messages (name, email, subject, message, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)",
-        [name, email, subject || null, message, ip, sanitizeHeaderValue(req.get("user-agent"), 255)],
+        [name, email, subject || null, message, ip, sanitizeSingleLine(req.get("user-agent"), 255)],
       );
-    messageId = result.insertId;
+    console.log(`[Contact] 📩 Message #${result.insertId} from ${name} <${email}>`);
+    res.status(201).json({ message: "Message received! I will get back to you soon." });
   } catch (err) {
     console.error("[Contact] ❌ Failed to store message:", err.code || err.message);
-  }
-
-  const hasEmailConfig = !!process.env.EMAIL_USER && !!process.env.EMAIL_PASS;
-  let emailError = null;
-
-  if (hasEmailConfig) {
-    try {
-      await getContactTransporter().sendMail({
-        from: `"Portfolio Contact" <${process.env.EMAIL_USER}>`,
-        to: process.env.EMAIL_TO || process.env.EMAIL_USER,
-        replyTo: `"${name.replace(/"/g, "")}" <${email}>`,
-        subject: subject ? `[Portfolio] ${subject}` : "[Portfolio] New Contact Message",
-        text: `From: ${name} <${email}>\n\n${message}`,
-        html: `<p><strong>From:</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p><p><strong>Subject:</strong> ${escapeHtml(subject) || "(none)"}</p><hr/><p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>`,
-      });
-    } catch (err) {
-      emailError = [err.code, err.responseCode, err.response || err.message]
-        .filter(Boolean)
-        .join(" | ");
-      console.error(`[Contact] ❌ Email send failed: ${emailError}`);
-    }
-  } else {
-    emailError = "EMAIL_USER/EMAIL_PASS not configured";
-    console.warn("[Contact] ⚠️ Email not configured — message stored only in the database.");
-  }
-
-  if (messageId) {
-    db.query(
-      "UPDATE contact_messages SET email_sent = ?, email_error = ? WHERE id = ?",
-      [emailError ? 0 : 1, emailError ? emailError.slice(0, 255) : null, messageId],
-      (err) => {
-        if (err) console.error("[Contact] ❌ Failed to record email status:", err.code || err.message);
-      },
-    );
-  }
-
-  // Only a total failure — neither stored nor emailed — is reported as an error.
-  if (!messageId && emailError) {
-    return res.status(503).json({
+    res.status(503).json({
       error:
-        "Your message could not be delivered right now. Please reach me on WhatsApp or at frankmk2025@gmail.com.",
+        "Your message could not be saved right now. Please reach me on WhatsApp or at frankmk2025@gmail.com.",
     });
   }
-
-  console.log(
-    `[Contact] 📩 Message #${messageId ?? "?"} from ${name} <${email}> — emailed: ${!emailError}`,
-  );
-  res.json({ message: "Message received! I will get back to you soon." });
 });
 
 app.get("/api/admin/contact-messages", verifyToken, (req, res) => {
   db.query(
-    "SELECT id, name, email, subject, message, email_sent, email_error, is_read, created_at FROM contact_messages ORDER BY created_at DESC",
+    "SELECT id, name, email, subject, message, is_read, created_at FROM contact_messages ORDER BY created_at DESC",
     (err, results) => {
       if (err) return res.status(500).json({ error: "Failed to fetch messages." });
       res.json(results);
@@ -495,14 +419,22 @@ app.get("/api/admin/contact-messages", verifyToken, (req, res) => {
 });
 
 app.patch("/api/admin/contact-messages/:id/read", verifyToken, (req, res) => {
+  const isRead = req.body.is_read === false ? 0 : 1;
   db.query(
-    "UPDATE contact_messages SET is_read = 1 WHERE id = ?",
-    [req.params.id],
+    "UPDATE contact_messages SET is_read = ? WHERE id = ?",
+    [isRead, req.params.id],
     (err) => {
       if (err) return res.status(500).json({ error: "Failed to update message." });
-      res.json({ message: "Message marked as read." });
+      res.json({ message: isRead ? "Message marked as read." : "Message marked as unread." });
     },
   );
+});
+
+app.delete("/api/admin/contact-messages/:id", verifyToken, (req, res) => {
+  db.query("DELETE FROM contact_messages WHERE id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ error: "Failed to delete message." });
+    res.json({ message: "Message deleted." });
+  });
 });
 
 // ============================================
