@@ -539,6 +539,15 @@ body {
     font-weight: 600;
 }
 
+a.btn-primary,
+a.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-container {
