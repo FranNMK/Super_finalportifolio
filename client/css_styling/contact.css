@@ -231,6 +231,15 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     transform: none;
 }
 
+/* HONEYPOT — hidden from humans, visible to bots */
+.cf-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
 /* STATUS MESSAGE */
 .cf-status {
     margin-top: 14px;
