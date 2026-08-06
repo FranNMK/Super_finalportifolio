@@ -106,6 +106,10 @@
                             <label for="cf-message">Message</label>
                             <textarea id="cf-message" name="message" rows="6" placeholder="Tell me about your project or opportunity…" required></textarea>
                         </div>
+                        <div class="cf-hp" aria-hidden="true">
+                            <label for="cf-website">Website</label>
+                            <input type="text" id="cf-website" name="website" tabindex="-1" autocomplete="off">
+                        </div>
                         <button type="submit" class="cf-submit" id="cf-submit">
                             <span id="cf-btn-text"><i class="fas fa-paper-plane"></i> Send Message</span>
                             <span id="cf-btn-loader" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Sending…</span>
@@ -164,10 +168,12 @@
                 name: form.name.value.trim(),
                 email: form.email.value.trim(),
                 subject: form.subject.value.trim(),
-                message: form.message.value.trim()
+                message: form.message.value.trim(),
+                website: form.website.value
             };
 
-            const API = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+            const isLocal = ['localhost', '127.0.0.1', ''].includes(window.location.hostname);
+            const API = isLocal ? 'http://localhost:5000/api' : '/api';
 
             try {
                 const res = await fetch(`${API}/contact`, {
