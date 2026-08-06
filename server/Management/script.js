@@ -807,9 +807,19 @@ async function viewMessage(id) {
     document.getElementById('viewMessageSubject').textContent = m.subject || '(none)';
     document.getElementById('viewMessageBody').textContent = m.message;
 
-    const replyLink = document.getElementById('viewMessageReply');
     const replySubject = m.subject ? `Re: ${m.subject}` : 'Re: your message';
-    replyLink.href = `mailto:${m.email}?subject=${encodeURIComponent(replySubject)}`;
+    const replyBody = `Hi ${m.name},\n\n\n\n---\nOn ${formatMessageDate(m.created_at)} you wrote:\n${m.message.replace(/^/gm, '> ')}\n`;
+
+    // Gmail's compose URL, so the button works without a mailto: handler
+    // registered in the browser.
+    document.getElementById('viewMessageReplyGmail').href =
+        'https://mail.google.com/mail/?view=cm&fs=1'
+        + `&to=${encodeURIComponent(m.email)}`
+        + `&su=${encodeURIComponent(replySubject)}`
+        + `&body=${encodeURIComponent(replyBody)}`;
+
+    document.getElementById('viewMessageReplyMailto').href =
+        `mailto:${m.email}?subject=${encodeURIComponent(replySubject)}&body=${encodeURIComponent(replyBody)}`;
 
     const modal = document.getElementById('viewMessageModal');
     modal.classList.add('active');
