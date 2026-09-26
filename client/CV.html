@@ -216,21 +216,46 @@
             font-size: 13px;
         }
 
-        /* ─── EDUCATION ─────────────────────────────────────────── */
-        .edu-entry {
-            margin-bottom: 6px;
+        /* ─── EDUCATION / EXPERIENCE ────────────────────────────── */
+        .edu-entry, .exp-entry {
+            margin-bottom: 8px;
         }
 
-        .edu-school {
+        .edu-school, .exp-company {
             font-weight: 600;
             font-size: 12.5px;
             color: #0d1b2a;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
         }
 
-        .edu-detail {
+        .edu-detail, .exp-detail {
             font-size: 12px;
             color: #6b7280;
             margin-top: 1px;
+        }
+
+        .exp-list {
+            list-style: none;
+            padding: 0;
+            margin: 4px 0 0 0;
+        }
+
+        .exp-list li {
+            font-size: 12px;
+            line-height: 1.55;
+            color: #374151;
+            padding-left: 14px;
+            position: relative;
+            margin-bottom: 2px;
+        }
+
+        .exp-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #1a6dcc;
         }
 
         /* ─── FOOTER (web only) ─────────────────────────────────── */
@@ -266,7 +291,7 @@
                 padding: 0 !important;
                 box-shadow: none !important;
             }
-            .project, .cert-list li, .edu-entry { page-break-inside: avoid; }
+            .project, .cert-list li, .edu-entry, .exp-entry { page-break-inside: avoid; }
             .section-heading { page-break-after: avoid; }
             a { color: #1a6dcc !important; }
         }
@@ -307,7 +332,7 @@
         <div class="cv-contact-line">
             <i class="fas fa-map-marker-alt" style="color:#1a6dcc;margin-right:4px;"></i>Murang'a County, Kenya
             <span class="sep">|</span>
-            <i class="fas fa-envelope" style="color:#1a6dcc;margin-right:4px;"></i><a href="mailto:frankmk2025@gmail.com">frankmk2025@gmail.com</a>
+            <i class="fas fa-envelope" style="color:#1a6dcc;margin-right:4px;"></i><a href="mailto:frankmwash8121@gmail.com">frankmwash8121@gmail.com</a>
             <span class="sep">|</span>
             <i class="fas fa-phone" style="color:#1a6dcc;margin-right:4px;"></i>0710 217 048
         </div>
@@ -325,12 +350,7 @@
         <div class="section">
             <div class="section-heading">Professional Summary</div>
             <p>
-                ICT Diploma student and self-driven software developer based in Murang'a County, Kenya, with
-                hands-on experience designing and deploying full-stack web platforms for education and community
-                impact. Founder of <strong>FK Systems Africa</strong>, a software engineering and digital skills
-                agency. Combines technical build capability with certified training across digital marketing,
-                content writing, AI, and graphic design — equally comfortable coordinating programs and
-                executing the technical work behind them.
+                ICT Diploma student and self-driven full-stack developer based in Murang'a County, Kenya, with hands-on experience designing and deploying production web platforms (Node.js/Express, React, TiDB/MySQL) for education and community impact, including an award-winning events platform and a live AI-guided interview tool. Founder of <strong>FK Systems Africa</strong>, a software engineering and digital skills agency. Combines technical build capability with certified training across digital marketing, content writing, AI, and graphic design — equally comfortable coordinating programs and executing the technical work behind them.
             </p>
         </div>
 
@@ -338,8 +358,36 @@
         <div class="section">
             <div class="section-heading">Education</div>
             <div class="edu-entry">
-                <div class="edu-school">ICT Diploma — Kigumo Technical and Vocational College (KTVC), Murang'a County, Kenya</div>
-                <div class="edu-detail">Expected graduation: 2027</div>
+                <div class="edu-school"><span>ICT Diploma — Kigumo Technical and Vocational College (KTVC), Murang'a County, Kenya</span><span>Ongoing</span></div>
+                <div class="edu-detail">Relevant coursework: C/C++, MySQL, HTML, CSS, JavaScript, TypeScript, PHP, Node.js, Python</div>
+            </div>
+        </div>
+
+        <!-- ══ EXPERIENCE ══ -->
+        <div class="section">
+            <div class="section-heading">Experience</div>
+            
+            <div class="exp-entry">
+                <div class="exp-company"><span>ICT Support Technician — Kigumo Bendera Senior School</span><span>August 2026 – Present (Industrial Attachment)</span></div>
+                <ul class="exp-list">
+                    <li>Provide day-to-day ICT support across school offices and classrooms; setup and maintain the ICT Lab network.</li>
+                    <li>Audited the school's legacy MS Access dorm/boarding management system, identifying data-integrity gaps (no audit trail, hard deletes) affecting over 600 students/dorms/beds.</li>
+                    <li>Scoping and building a modernized replacement (React, TiDB/MySQL, Auth0) covering student, dorm, bed-allocation, and reporting workflows.</li>
+                </ul>
+            </div>
+
+            <div class="exp-entry">
+                <div class="exp-company"><span>Freelance Web Developer — Self-employed / via FK Systems Africa</span><span>May 2026 – Present</span></div>
+                <ul class="exp-list">
+                    <li>Deliver full-stack web development projects remotely for learning institutions while completing a full-time ICT Diploma, using Node.js/Express, Django, and MySQL/TiDB.</li>
+                </ul>
+            </div>
+
+            <div class="exp-entry">
+                <div class="exp-company"><span>Freelance Graphic Designer</span><span>Jan – Nov 2025</span></div>
+                <ul class="exp-list">
+                    <li>Produced event posters, brand kits, and social media assets for institutions like churches and individual businesses using Canva and AI-assisted design tools.</li>
+                </ul>
             </div>
         </div>
 
@@ -347,10 +395,10 @@
         <div class="section">
             <div class="section-heading">Skills</div>
             <ul class="skills-list">
-                <li><strong>Languages &amp; Frameworks:</strong> JavaScript, TypeScript, Python, C/C++, HTML/CSS, Node.js/Express, Django, Bootstrap, Tailwind CSS, Cloudinary</li>
+                <li><strong>Languages &amp; Frameworks:</strong> JavaScript, TypeScript, Python, C/C++, HTML/CSS, Node.js/Express, Django, React, Bootstrap, Tailwind CSS</li>
                 <li><strong>Databases:</strong> MySQL, TiDB</li>
-                <li><strong>Tools &amp; Platforms:</strong> Git/GitHub, n8n (workflow automation), Canva, Cisco Packet Tracer</li>
-                <li><strong>AI &amp; Data:</strong> Prompt engineering, agentic frameworks, AI ethics &amp; governance, data analytics fundamentals</li>
+                <li><strong>Tools &amp; Platforms:</strong> Git/GitHub, n8n (workflow automation), Cloudinary, Auth0, Canva, Cisco Packet Tracer</li>
+                <li><strong>AI &amp; Data:</strong> Prompt engineering, agentic frameworks, AI ethics &amp; governance, data analytics fundamentals, IBM Granite models</li>
                 <li><strong>Digital &amp; Communication:</strong> Digital marketing, content writing &amp; virtual assistance, AI-assisted graphic design</li>
             </ul>
         </div>
@@ -364,31 +412,39 @@
                     <span class="project-name">Kigumo TVC College Website</span>
                     <span class="project-meta"><a href="https://kigumotvc.ac.ke" target="_blank">kigumotvc.ac.ke</a></span>
                 </div>
-                <p class="project-desc">Designed, built, and deployed the official college website on a Node.js / Express / TiDB / Cloudinary stack; managed hosting migration from Railway to cPanel via Webcom Kenya.</p>
+                <p class="project-desc">Designed, built, and deployed the official college website (Node.js/Express, TiDB, Cloudinary), then managed a full hosting migration from Railway to cPanel via Webcom Kenya, serving approx. 150 students/staff/visitors with no downtime reported.</p>
             </div>
 
             <div class="project">
                 <div class="project-header">
                     <span class="project-name">EventHub</span>
-                    <span class="project-meta">1st Place — 2026 KATTI Mount Kenya West Region TVET Fair</span>
+                    <span class="project-meta">1st Place — Software Application Development, 2026 KATTI Mount Kenya West Region TVET Fair</span>
                 </div>
-                <p class="project-desc">Built an events management platform (Node.js / TiDB); awarded 1st place in Software Application Development and advanced to the national round.</p>
+                <p class="project-desc">Built an events management platform (Node.js, TiDB) handling about 10 events simultaneously, placing 1st among 20+ projects and advancing to the national round.</p>
             </div>
 
             <div class="project">
                 <div class="project-header">
-                    <span class="project-name">JengaShule</span>
-                    <span class="project-meta">School SaaS Concept</span>
+                    <span class="project-name">SkillNarrate</span>
+                    <span class="project-meta"><a href="https://skill-narrate.vercel.app" target="_blank">skill-narrate.vercel.app</a></span>
                 </div>
-                <p class="project-desc">Designed a school management SaaS covering student records, exam grading, and M-Pesa / USSD-based fee collection for underserved primary and junior schools in Kenya.</p>
+                <p class="project-desc">Built an AI-guided interview platform that converts TVET/technical students' projects into polished professional outputs through an adaptive conversational flow, using Next.js, Supabase, and Google Gemini (used by 5 students so far).</p>
+            </div>
+
+            <div class="project">
+                <div class="project-header">
+                    <span class="project-name">Kigumo Bendera Dorm System (Kibei Dorm System)</span>
+                    <span class="project-meta">React / TiDB / Auth0</span>
+                </div>
+                <p class="project-desc">Rebuilding Kigumo Bendera Senior School's legacy MS Access dorm/boarding management system as a free, mobile-responsive web app with role-based access, full audit trails, and automated bed-distribution constraints across 600+ beds.</p>
             </div>
 
             <div class="project">
                 <div class="project-header">
                     <span class="project-name">FK Systems Africa</span>
-                    <span class="project-meta">Founder</span>
+                    <span class="project-meta">Founder — Murang'a County, Kenya</span>
                 </div>
-                <p class="project-desc">Founded and operate a software engineering and digital skills agency in Murang'a County, delivering web development and digital skills training services.</p>
+                <p class="project-desc">Founded and operated a software engineering and digital skills agency, building the brand identity and Node.js/Express/MySQL company site.</p>
             </div>
         </div>
 
@@ -399,19 +455,21 @@
                 <li>Power Learn Project (PLP) Africa — 16-Week Software Development Program (Python, SQL &amp; Database Design, Startup Building for Developers, Full-Stack Web Development – MERN)</li>
                 <li>Power Learn Project (PLP) Africa — AI Safari: Agentic Frameworks, Automation, Prompt Engineering &amp; AI Ethics/Governance</li>
                 <li>IBM SkillsBuild — IBM Granite Models for Software Development</li>
-                <li>Moringa School — Artificial Intelligence for Software Engineering</li>
+                <li>Moringa School — Artificial Intelligence Part Time Course</li>
                 <li>ICT Authority Kenya (with Salaam, Pathways Technologies &amp; Data Breed Africa) — Foundational AI, AI Training, and Data Analytics Training</li>
                 <li>Cisco Networking Academy — Getting Started with Cisco Packet Tracer</li>
                 <li>Women in Digital Business (ILO/ITC, with Microsoft) — Digital Marketing &amp; Digital Skills Foundations Programme</li>
                 <li>Ajira Digital / Ministry of Labour &amp; Social Protection — AI for Graphic Design; Digital Marketing Training &amp; Mentorship; Content Writing &amp; Virtual Assistance</li>
+                <li>Kigumo TVC ICT Workshop, Edition 1</li>
             </ul>
         </div>
 
-        <!-- ══ AFFILIATIONS ══ -->
+        <!-- ══ LEADERSHIP & AFFILIATIONS ══ -->
         <div class="section">
-            <div class="section-heading">Affiliations</div>
+            <div class="section-heading">Leadership &amp; Affiliations</div>
             <ul class="cert-list">
                 <li>Power Learn Project (PLP) Africa — Alumnus and active community member</li>
+                <li>Participant, Nyeri National Polytechnic skills competition — Software Development category</li>
             </ul>
         </div>
 
